@@ -7,18 +7,127 @@
     "vscode": "^1.68.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Debuggers"
   ],
   "activationEvents": [
-    "onLanguage:solidity",
-    "onCommand:helloworld.helloWorld"
+    "onLanguage:solidity"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
+    "debuggers": [
       {
-        "command": "helloworld.helloWorld",
-        "title": "Hello World"
+        "type": "solidity",
+        "languages": [
+          "solidity"
+        ],
+        "label": "Solidity Debug",
+        "program": "./out/debugAdapter.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to a text file.",
+                "default": "${workspaceFolder}/${command:AskForProgramName}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after launch.",
+                "default": true
+              },
+              "trace": {
+                "type": "boolean",
+                "description": "Enable logging of the Debug Adapter Protocol.",
+                "default": true
+              },
+              "compileError": {
+                "type": "string",
+                "description": "Simulates a compile error in 'launch' request.",
+                "enum": [
+                  "default",
+                  "show",
+                  "hide"
+                ],
+                "enumDescriptions": [
+                  "default: show fake compile error to user",
+                  "show fake compile error to user",
+                  "do not show fake compile error to user"
+                ]
+              }
+            }
+          },
+          "attach": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to a text file.",
+                "default": "${workspaceFolder}/${command:AskForProgramName}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after attach.",
+                "default": true
+              },
+              "trace": {
+                "type": "boolean",
+                "description": "Enable logging of the Debug Adapter Protocol.",
+                "default": true
+              },
+              "compileError": {
+                "type": "string",
+                "description": "Simulates a compile error in 'attach' request.",
+                "enum": [
+                  "default",
+                  "show",
+                  "hide"
+                ],
+                "enumDescriptions": [
+                  "default: show fake compile error to user",
+                  "show fake compile error to user",
+                  "do not show fake compile error to user"
+                ]
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "solidity",
+            "request": "launch",
+            "name": "Launch Solidity",
+            "program": "${workspaceFolder}/${command:AskForProgramName}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Solidity Debug: Launch",
+            "description": "A new configuration for 'debugging' a solidity file.",
+            "body": {
+              "type": "solidity",
+              "request": "launch",
+              "name": "Launch Solidity",
+              "program": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
+              "stopOnEntry": true
+            }
+          }
+        ],
+        "variables": {
+          "AskForProgramName": "extension.solidity-debug.getProgramName"
+        }
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "solidity"
       }
     ],
     "snippets": [
@@ -57,16 +166,34 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.68.0",
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "16.x",
+    "@types/path-browserify": "^1.0.0",
+    "@types/vscode": "^1.68.0",
     "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.30.0",
+    "@vscode/debugadapter": "^1.56.0",
+    "@vscode/test-electron": "^2.1.5",
     "eslint": "^8.18.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
-    "typescript": "^4.7.4",
-    "@vscode/test-electron": "^2.1.5"
+    "path-browserify": "^1.0.1",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@erebos/bzz-node": "^0.13.0",
+    "@ethereumjs/tx": "^3.5.2",
+    "@remix-project/remix-astwalker": "^0.0.44",
+    "@remix-project/remix-debug": "^0.5.14",
+    "@remix-project/remix-lib": "^0.5.14",
+    "await-notify": "^1.0.1",
+    "axios": "^0.27.2",
+    "ethereumjs-util": "^7.1.5",
+    "solc": "^0.8.15",
+    "string-similarity": "^4.0.4",
+    "vscode-languageclient": "^8.0.1",
+    "vscode-languageserver": "^8.0.1",
+    "web3": "^1.7.4"
   }
 }
