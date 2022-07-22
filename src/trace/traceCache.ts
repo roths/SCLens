@@ -1,96 +1,104 @@
-'use strict'
-import { util } from '@remix-project/remix-lib'
-import { StructLog } from '../web3_type';
-// eslint-disable-next-line camelcase
-const { sha3_256 } = util;
+'use strict';
+import { util } from '@remix-project/remix-lib';
+import { StructLog } from '../common/type';
 
-interface Call {
+export interface Call {
   op: string,
   address: string | null,
   callStack: string[],
-  calls: { [key: number]: Call },
+  calls: { [key: number]: Call; },
   start: number,
   return?: number,
-  reverted?: boolean
+  reverted?: boolean;
 }
 
-interface CurrentCall {
+export interface CurrentCall {
   call: Call,
   parent: CurrentCall | null,
 }
 
+/**
+ * get and cache all state fields from trace log 
+ */
 export class TraceCache {
-  returnValues!: {
-    [step: number]: string[]
-  };
-  stopIndexes!: { index: number, address: string | null }[];
-  outofgasIndexes!: { index: number, address: string | null }[];
-  currentCall!: CurrentCall | null;
-  callsTree!: { call: Call } | null;
+  returnValues: {
+    [vmTraceIndex: number]: string[];
+  } = {};
+
+  stopIndexes: {
+    vmTraceIndex: number;
+    address: string | null;
+  }[] = [];
+
+  outofgasIndexes: {
+    vmTraceIndex: number;
+    address: string | null;
+  }[] = [];
+
+  currentCall: CurrentCall | null;
+  callsTree!: { call: Call; } | null;
+
   callsData!: {
-    [key: number]: string
+    [key: number]: string;
   };
+
   contractCreation!: {
-    [key: string]: string
+    [key: string]: string;
   };
+
   steps!: {
-    [key: number]: number
+    [key: number]: number;
   };
-  addresses!: (string | null)[];
-  callDataChanges!: number[];
-  memoryChanges!: number[];
-  storageChanges!: number[];
-  sstore!: {
-    [key: number]: {
+  addresses: (string | null)[] = [];
+  callDataChanges: number[] = [];
+  memoryChanges: number[] = [];
+  storageChanges: number[] = [];
+  sstore: {
+    [vmTraceIndex: number]: {
       address: string,
       key: string | null,
       value: string | null,
-      hashedKey: string | null
-    }
-  };
+      hashedKey: string | null;
+    };
+  } = {};
 
   constructor() {
-    this.init();
-  }
-
-
-  init() {
     // ...Changes contains index in the vmtrace of the corresponding changes
 
-    this.returnValues = {}
-    this.stopIndexes = []
-    this.outofgasIndexes = []
-    this.currentCall = null
-    this.callsTree = null
-    this.callsData = {}
-    this.contractCreation = {}
-    this.steps = {}
-    this.addresses = []
-    this.callDataChanges = []
-    this.memoryChanges = []
-    this.storageChanges = []
-    this.sstore = {} // all sstore occurence in the trace
+    this.returnValues = {};
+    this.stopIndexes = [];
+    this.outofgasIndexes = [];
+    this.currentCall = null;
+    this.callsTree = null;
+    this.callsData = {};
+    this.contractCreation = {};
+    this.steps = {};
+    this.addresses = [];
+    this.callDataChanges = [];
+    this.memoryChanges = [];
+    this.storageChanges = [];
+    this.sstore = {}; // all sstore occurence in the trace
   }
 
-  pushSteps(index: number, currentCallIndex: number) {
-    this.steps[index] = currentCallIndex;
+  pushSteps(vmTraceIndex: number, currentCallIndex: number) {
+    this.steps[vmTraceIndex] = currentCallIndex;
   }
 
-  pushCallDataChanges(value: number, calldata: string) {
-    this.callDataChanges.push(value);
-    this.callsData[value] = calldata;
+  pushCallDataChanges(vmTraceIndex: number, calldata: string) {
+    this.callDataChanges.push(vmTraceIndex);
+    this.callsData[vmTraceIndex] = calldata;
   }
 
-  pushMemoryChanges(value: number) {
-    this.memoryChanges.push(value);
+  pushMemoryChanges(vmTraceIndex: number) {
+    this.memoryChanges.push(vmTraceIndex);
   }
 
   // outOfGas has been removed because gas left logging is apparently made differently
   // in the vm/geth/eth. TODO add the error property (with about the error in all clients)
-  pushCall(step: StructLog, index: number, address: string | null, callStack: string[], reverted: boolean = false) {
-    const validReturnStep = step.op === 'RETURN' || step.op === 'STOP';
+  pushCall(traceLog: StructLog, vmTraceIndex: number, address: string | null, callStack: string[], reverted: boolean = false) {
+    const validReturnStep = traceLog.op === 'RETURN' || traceLog.op === 'STOP';
     if ((validReturnStep || reverted) && (this.currentCall)) {
-      this.currentCall.call.return = index - 1;
+      this.currentCall.call.return = vmTraceIndex - 1;
       if (!validReturnStep) {
         this.currentCall.call.reverted = reverted;
       }
@@ -101,36 +109,36 @@ export class TraceCache {
       return;
     }
     const call: Call = {
-      op: step.op,
+      op: traceLog.op,
       address: address,
       callStack: callStack,
       calls: {},
-      start: index
+      start: vmTraceIndex
     };
     this.addresses.push(address);
     if (this.currentCall) {
-      this.currentCall.call.calls[index] = call;
+      this.currentCall.call.calls[vmTraceIndex] = call;
     } else {
       this.callsTree = { call: call };
     }
     this.currentCall = { call: call, parent: this.currentCall };
   }
 
-  pushOutOfGasIndex(index: number, address: string | null) {
-    this.outofgasIndexes.push({ index, address });
+  pushOutOfGasIndex(vmTraceIndex: number, address: string | null) {
+    this.outofgasIndexes.push({ vmTraceIndex, address });
   }
 
-  pushStopIndex(index: number, address: string | null) {
-    this.stopIndexes.push({ index, address });
+  pushStopIndex(vmTraceIndex: number, address: string | null) {
+    this.stopIndexes.push({ vmTraceIndex, address });
   }
 
-  pushReturnValue(step: number, value: string[]) {
-    this.returnValues[step] = value;
+  pushReturnValue(vmTraceIndex: number, value: string[]) {
+    this.returnValues[vmTraceIndex] = value;
   }
 
-  pushContractCreationFromMemory(index: number, token: string, trace: StructLog[], lastMemoryChange) {
+  pushContractCreationFromMemory(vmTraceIndex: number, token: string, trace: StructLog[], lastMemoryChange: number) {
     const memory = trace[lastMemoryChange].memory;
-    const stack = trace[index].stack;
+    const stack = trace[vmTraceIndex].stack;
     const offset = 2 * parseInt(stack[stack.length - 2], 16);
     const size = 2 * parseInt(stack[stack.length - 3], 16);
     this.contractCreation[token] = '0x' + memory.join('').substr(offset, size);
@@ -145,21 +153,21 @@ export class TraceCache {
     this.storageChanges = [];
   }
 
-  pushStoreChanges(index: number, address: string, key: string | null = null, value: string | null = null) {
-    this.sstore[index] = {
+  pushStoreChanges(vmTraceIndex: number, address: string, key: string | null = null, value: string | null = null) {
+    this.sstore[vmTraceIndex] = {
       address: address,
       key: key,
       value: value,
-      hashedKey: key && sha3_256(key)
+      hashedKey: key && util.sha3_256(key)
     };
-    this.storageChanges.push(index);
+    this.storageChanges.push(vmTraceIndex);
   }
 
-  accumulateStorageChanges(index: number, address: string, storage: any) {
-    const ret: { [key: string]: { key: string, value: string } } = Object.assign({}, storage);
+  accumulateStorageChanges(vmTraceIndex: number, address: string, storage: any) {
+    const ret: { [key: string]: { key: string, value: string; }; } = Object.assign({}, storage);
     for (const k in this.storageChanges) {
       const changesIndex = this.storageChanges[k];
-      if (changesIndex > index) {
+      if (changesIndex > vmTraceIndex) {
         return ret;
       }
       const sstore = this.sstore[changesIndex];

@@ -1,28 +1,28 @@
-'use strict'
-import { util } from '@remix-project/remix-lib'
-import { isContractCreation } from '../trace/traceHelper'
-import { extractStateVariables } from './stateDecoder'
-import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitions, StatesDefinitions } from './astHelper'
-import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract } from '../common/type'
-import { TypesOffsets } from './decodeInfo'
+'use strict';
+import { util } from '@remix-project/remix-lib';
+import { isContractCreation } from '../trace/traceHelper';
+import { extractStateVariables } from './stateDecoder';
+import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitions, StatesDefinitions } from './astHelper';
+import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract } from '../common/type';
+import { TypesOffsets } from './decodeInfo';
 
 export interface ContractObject {
   name: string,
-  contract: CompiledContract
+  contract: CompiledContract;
 }
 
 export class SolidityProxy {
-  cache
-  getCurrentCalledAddressAt
-  getCode
-  sources!: ComplitionSources
-  contracts!: CompiledContractObj
+  cache;
+  getCurrentCalledAddressAt;
+  getCode;
+  sources!: ComplitionSources;
+  contracts!: CompiledContractObj;
 
   constructor({ getCurrentCalledAddressAt, getCode }) {
-    this.cache = new Cache()
-    this.reset({})
-    this.getCurrentCalledAddressAt = getCurrentCalledAddressAt
-    this.getCode = getCode
+    this.cache = new Cache();
+    this.reset({});
+    this.getCurrentCalledAddressAt = getCurrentCalledAddressAt;
+    this.getCode = getCode;
   }
 
   /**
@@ -31,9 +31,9 @@ export class SolidityProxy {
     * @param {Object} compilationResult  - result os a compilatiion (diectly returned by the compiler)
     */
   reset(compilationResult: CompilationResult) {
-    this.sources = compilationResult.sources!
-    this.contracts = compilationResult.contracts!
-    this.cache.reset()
+    this.sources = compilationResult.sources!;
+    this.contracts = compilationResult.contracts!;
+    this.cache.reset();
   }
 
   /**
@@ -42,7 +42,7 @@ export class SolidityProxy {
     * @return {Bool} - returns true if a compilation result has been applied
     */
   loaded() {
-    return this.contracts !== undefined
+    return this.contracts !== undefined;
   }
 
   /**
@@ -52,14 +52,14 @@ export class SolidityProxy {
     * @param {Function} cb  - callback returns (error, contractName)
     */
   async contractObjectAt(vmTraceIndex: number) {
-    const address = this.getCurrentCalledAddressAt(vmTraceIndex)
+    const address = this.getCurrentCalledAddressAt(vmTraceIndex);
     if (this.cache.contractObjectByAddress[address]) {
-      return this.cache.contractObjectByAddress[address]
+      return this.cache.contractObjectByAddress[address];
     }
-    const code = await this.getCode(address)
-    const contract = contractObjectFromCode(this.contracts, code.deployedBytecode.object, address)
-    this.cache.contractObjectByAddress[address] = contract!
-    return contract
+    const code = await this.getCode(address);
+    const contract = contractObjectFromCode(this.contracts, code.deployedBytecode.object, address);
+    this.cache.contractObjectByAddress[address] = contract!;
+    return contract;
   }
 
   /**
@@ -70,12 +70,12 @@ export class SolidityProxy {
     */
   extractStatesDefinitions() {
     if (!this.cache.contractDeclarations) {
-      this.cache.contractDeclarations = extractContractDefinitions(this.sources)
+      this.cache.contractDeclarations = extractContractDefinitions(this.sources);
     }
     if (!this.cache.statesDefinitions) {
-      this.cache.statesDefinitions = extractStatesDefinitions(this.sources, this.cache.contractDeclarations)
+      this.cache.statesDefinitions = extractStatesDefinitions(this.sources, this.cache.contractDeclarations);
     }
-    return this.cache.statesDefinitions
+    return this.cache.statesDefinitions;
   }
 
   /**
@@ -86,9 +86,9 @@ export class SolidityProxy {
     */
   extractStateVariables(contractName: string) {
     if (!this.cache.stateVariablesByContractName[contractName]) {
-      this.cache.stateVariablesByContractName[contractName] = extractStateVariables(contractName, this.sources)
+      this.cache.stateVariablesByContractName[contractName] = extractStateVariables(contractName, this.sources);
     }
-    return this.cache.stateVariablesByContractName[contractName]
+    return this.cache.stateVariablesByContractName[contractName];
   }
 
   /**
@@ -98,8 +98,8 @@ export class SolidityProxy {
     * @return {Object} - returns state variables of @args vmTraceIndex
     */
   async extractStateVariablesAt(vmtraceIndex: number) {
-    const contract = await this.contractObjectAt(vmtraceIndex)
-    return this.extractStateVariables(contract!.name)
+    const contract = await this.contractObjectAt(vmtraceIndex);
+    return this.extractStateVariables(contract!.name);
   }
 
   /**
@@ -109,17 +109,17 @@ export class SolidityProxy {
     * @return {Object} - AST of the current file
     */
   ast(sourceLocation, generatedSources) {
-    const file = this.fileNameFromIndex(sourceLocation.file)
+    const file = this.fileNameFromIndex(sourceLocation.file);
     if (!file && generatedSources && generatedSources.length) {
       for (const source of generatedSources) {
         if (source.id === sourceLocation.file) {
-          return source.ast
+          return source.ast;
         }
       }
     } else if (this.sources[file]) {
-      return this.sources[file].ast
+      return this.sources[file].ast;
     }
-    return null
+    return null;
   }
 
   /**
@@ -129,37 +129,37 @@ export class SolidityProxy {
    * @return {String} - filename
    */
   fileNameFromIndex(index: number) {
-    return Object.keys(this.contracts)[index]
+    return Object.keys(this.contracts)[index];
   }
 }
 
 function contractObjectFromCode(contracts: CompiledContractObj, code: string, address: string): ContractObject | null {
-  const isCreation = isContractCreation(address)
+  const isCreation = isContractCreation(address);
   for (const file in contracts) {
     for (const contract in contracts[file]) {
-      const bytecode = isCreation ? contracts[file][contract].evm.bytecode.object : contracts[file][contract].evm.deployedBytecode.object
+      const bytecode = isCreation ? contracts[file][contract].evm.bytecode.object : contracts[file][contract].evm.deployedBytecode.object;
       if (util.compareByteCode(code, bytecode)) {
-        return { name: contract, contract: contracts[file][contract] }
+        return { name: contract, contract: contracts[file][contract] };
       }
     }
   }
-  return null
+  return null;
 }
 
 class Cache {
-  contractObjectByAddress!: { [key: string]: ContractObject }
-  stateVariablesByContractName!: { [ket: string]: TypesOffsets[] }
-  contractDeclarations!: ContractDefinitions | null
-  statesDefinitions!: StatesDefinitions | null
+  contractObjectByAddress!: { [key: string]: ContractObject; };
+  stateVariablesByContractName!: { [ket: string]: TypesOffsets[]; };
+  contractDeclarations!: ContractDefinitions | null;
+  statesDefinitions!: StatesDefinitions | null;
 
   constructor() {
-    this.reset()
+    this.reset();
   }
 
   reset() {
-    this.contractObjectByAddress = {}
-    this.stateVariablesByContractName = {}
-    this.contractDeclarations = null
-    this.statesDefinitions = null
+    this.contractObjectByAddress = {};
+    this.stateVariablesByContractName = {};
+    this.contractDeclarations = null;
+    this.statesDefinitions = null;
   }
 }

@@ -15,12 +15,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	compiler = new SolcCompiler(workspaceUtil.getCurrentWorkspaceRootFsPath()!, context.extensionPath);
 
-	debug()
+	// debug();
 	var editor = vscode.window.activeTextEditor;
-	const currentDocument = editor?.document.uri;
-	compiler.compile(currentDocument?.fsPath!).then((result) => {console.log(result)}).catch((e) => {console.log(e)});
+	// const currentDocument = editor?.document.uri;
+	// compiler.compile(currentDocument?.fsPath!).then((result) => {console.log(result)}).catch((e) => {console.log(e)});
 	// compiler.diagnostic(currentDocument?.fsPath!).then((result) => {console.log(result)}).catch((e) => {console.log(e)});
-	
+
 	activateSolidityDebug(context, new InlineDebugAdapterFactory());
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)

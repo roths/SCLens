@@ -1,20 +1,20 @@
-'use strict'
-import { AstWalker } from '@remix-project/remix-astwalker'
-import { ComplitionSources, AstNode } from '../common/type'
+'use strict';
+import { AstWalker } from '@remix-project/remix-astwalker';
+import { ComplitionSources, AstNode } from '../common/type';
 
 export interface ContractDefinitions {
-  contractsById: { [key: string]: AstNode },
-  contractsByName: { [key: string]: AstNode },
-  sourcesByContract: { [key: string]: string }
+  contractsById: { [key: string]: AstNode; },
+  contractsByName: { [key: string]: AstNode; },
+  sourcesByContract: { [key: string]: string; };
 }
 
 export interface StatesDefinitions {
-  [key: string]: StateDefinitions| null
+  [key: string]: StateDefinitions | null;
 }
 
 export interface StateDefinitions {
-  stateDefinitions: AstNode[], 
-  stateVariables: AstNode[]
+  stateDefinitions: AstNode[],
+  stateVariables: AstNode[];
 }
 /**
   * return all contract definitions of the given @astList
@@ -27,18 +27,18 @@ export function extractContractDefinitions(sourcesList: ComplitionSources) {
     contractsById: {},
     contractsByName: {},
     sourcesByContract: {}
-  }
-  const walker = new AstWalker()
+  };
+  const walker = new AstWalker();
   for (const k in sourcesList) {
     walker.walkFull(sourcesList[k].ast, (node: AstNode) => {
       if (node.nodeType === 'ContractDefinition') {
-        ret.contractsById[node.id] = node
-        ret.sourcesByContract[node.id] = k
-        ret.contractsByName[k + ':' + node.name] = node
+        ret.contractsById[node.id] = node;
+        ret.sourcesByContract[node.id] = k;
+        ret.contractsByName[k + ':' + node.name] = node;
       }
-    })
+    });
   }
-  return ret
+  return ret;
 }
 
 /**
@@ -48,18 +48,18 @@ export function extractContractDefinitions(sourcesList: ComplitionSources) {
   * @return {Object} - returns a list of node
   */
 export function extractOrphanDefinitions(sourcesList: ComplitionSources) {
-  const ret = []
+  const ret = [];
   for (const k in sourcesList) {
-    const ast = sourcesList[k].ast
+    const ast = sourcesList[k].ast;
     if (ast.nodes && ast.nodes.length) {
       for (const node of ast.nodes) {
         if (node.nodeType !== 'ContractDefinition') {
-          ret.push(node)
+          ret.push(node);
         }
       }
     }
   }
-  return ret
+  return ret;
 }
 
 /**
@@ -69,8 +69,8 @@ export function extractOrphanDefinitions(sourcesList: ComplitionSources) {
   * @param {Map} contracts  - all contracts defined in the current context
   * @return {Array} - array of base contracts in derived to base order as AST nodes.
   */
-export function getLinearizedBaseContracts(id: number, contractsById: { [key: string]: AstNode }): AstNode[] {
-  return contractsById[id].linearizedBaseContracts.map((id: string) => { return contractsById[id] })
+export function getLinearizedBaseContracts(id: number, contractsById: { [key: string]: AstNode; }): AstNode[] {
+  return contractsById[id].linearizedBaseContracts.map((id: string) => { return contractsById[id]; });
 }
 
 /**
@@ -82,29 +82,29 @@ export function getLinearizedBaseContracts(id: number, contractsById: { [key: st
   * @return {Object} - return an object containing: stateItems - list of all the children node of the @arg contractName
   *                                                 stateVariables - list of all the variable declaration of the @arg contractName
   */
-export function extractStateDefinitions(contractName: string, sourcesList: ComplitionSources, contracts: ContractDefinitions): StateDefinitions| null {
+export function extractStateDefinitions(contractName: string, sourcesList: ComplitionSources, contracts: ContractDefinitions): StateDefinitions | null {
   if (!contracts) {
-    contracts = extractContractDefinitions(sourcesList)
+    contracts = extractContractDefinitions(sourcesList);
   }
-  const node = contracts.contractsByName[contractName]
+  const node = contracts.contractsByName[contractName];
   if (!node) {
-    return null
+    return null;
   }
-  const stateItems = extractOrphanDefinitions(sourcesList)
-  const stateVar = []
-  const baseContracts = getLinearizedBaseContracts(node.id, contracts.contractsById)
-  baseContracts.reverse()
+  const stateItems = extractOrphanDefinitions(sourcesList);
+  const stateVar = [];
+  const baseContracts = getLinearizedBaseContracts(node.id, contracts.contractsById);
+  baseContracts.reverse();
   for (const k in baseContracts) {
-    const ctr = baseContracts[k]
+    const ctr = baseContracts[k];
     for (const i in ctr.nodes!) {
-      const item = ctr.nodes[i]
-      stateItems.push(item)
+      const item = ctr.nodes[i];
+      stateItems.push(item);
       if (item.nodeType === 'VariableDeclaration') {
-        stateVar.push(item)
+        stateVar.push(item);
       }
     }
   }
-  return { stateDefinitions: stateItems, stateVariables: stateVar }
+  return { stateDefinitions: stateItems, stateVariables: stateVar };
 }
 
 /**
@@ -114,18 +114,18 @@ export function extractStateDefinitions(contractName: string, sourcesList: Compl
   * @param {Object} [contracts] - map of contract definitions (contains contractsById, contractsByName)
   * @return {Object} - returns a mapping between contract name and contract state
   */
-export function extractStatesDefinitions(sourcesList: ComplitionSources, contracts: ContractDefinitions|null) {
+export function extractStatesDefinitions(sourcesList: ComplitionSources, contracts: ContractDefinitions | null) {
   if (!contracts) {
-    contracts = extractContractDefinitions(sourcesList)
+    contracts = extractContractDefinitions(sourcesList);
   }
-  const ret: StatesDefinitions = {}
+  const ret: StatesDefinitions = {};
   for (const contract in contracts.contractsById) {
-    const name = contracts.contractsById[contract].name
-    const source = contracts.sourcesByContract[contract]
-    const fullName = source + ':' + name
-    const state = extractStateDefinitions(fullName, sourcesList, contracts)
-    ret[fullName] = state
-    ret[name] = state // solc < 0.4.9
+    const name = contracts.contractsById[contract].name;
+    const source = contracts.sourcesByContract[contract];
+    const fullName = source + ':' + name;
+    const state = extractStateDefinitions(fullName, sourcesList, contracts);
+    ret[fullName] = state;
+    ret[name] = state; // solc < 0.4.9
   }
-  return ret
+  return ret;
 }

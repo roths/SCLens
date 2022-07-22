@@ -1,6 +1,6 @@
-'use strict'
+'use strict';
 import { helpers } from '@remix-project/remix-lib';
-import { StructLog } from '../web3_type';
+import { StructLog } from '../common/type';
 const { ui } = helpers;
 
 // vmTraceIndex has to point to a CALL, CODECALL, ...
@@ -15,49 +15,49 @@ export function resolveCalledAddress(vmTraceIndex: number, trace: StructLog[]) {
   return null;
 }
 
-export function isCallInstruction(step: StructLog) {
-  return ['CALL', 'STATICCALL', 'CALLCODE', 'CREATE', 'DELEGATECALL', 'CREATE2'].includes(step.op);
+export function isCallInstruction(traceLog: StructLog) {
+  return ['CALL', 'STATICCALL', 'CALLCODE', 'CREATE', 'DELEGATECALL', 'CREATE2'].includes(traceLog.op);
 }
 
-export function isCreateInstruction(step: StructLog) {
-  return step.op === 'CREATE' || step.op === 'CREATE2';
+export function isNewContextStorageInstruction(traceLog: StructLog) {
+  return ['CREATE' , 'CALL' , 'CREATE2'].includes(traceLog.op);
 }
 
-export function isReturnInstruction(step: StructLog) {
-  return step.op === 'RETURN';
+export function isCreateInstruction(traceLog: StructLog) {
+  return traceLog.op === 'CREATE' || traceLog.op === 'CREATE2';
 }
 
-export function isJumpDestInstruction(step: StructLog) {
-  return step.op === 'JUMPDEST'
+export function isReturnInstruction(traceLog: StructLog) {
+  return traceLog.op === 'RETURN';
 }
 
-export function isStopInstruction(step: StructLog) {
-  return step.op === 'STOP'
+export function isJumpDestInstruction(traceLog: StructLog) {
+  return traceLog.op === 'JUMPDEST';
 }
 
-export function isRevertInstruction(step: StructLog) {
-  return step.op === 'REVERT'
+export function isStopInstruction(traceLog: StructLog) {
+  return traceLog.op === 'STOP';
 }
 
-export function isSSTOREInstruction(step: StructLog) {
-  return step.op === 'SSTORE'
+export function isRevertInstruction(traceLog: StructLog) {
+  return traceLog.op === 'REVERT';
 }
 
-export function isSHA3Instruction(step: StructLog) {
-  return step.op === 'SHA3'
+export function isSSTOREInstruction(traceLog: StructLog) {
+  return traceLog.op === 'SSTORE';
 }
 
-export function newContextStorage(step: StructLog) {
-  return step.op === 'CREATE' || step.op === 'CALL' || step.op === 'CREATE2'
+export function isSHA3Instruction(traceLog: StructLog) {
+  return traceLog.op === 'SHA3';
 }
 
 export function isCallToPrecompiledContract(index: number, trace: StructLog[]) {
   // if stack empty => this is not a precompiled contract
-  const step = trace[index]
-  if (isCallInstruction(step)) {
-    return index + 1 < trace.length && trace[index + 1].stack.length !== 0
+  const traceLog = trace[index];
+  if (isCallInstruction(traceLog)) {
+    return index + 1 < trace.length && trace[index + 1].stack.length !== 0;
   }
-  return false
+  return false;
 }
 
 export function contractCreationToken(index: number) {

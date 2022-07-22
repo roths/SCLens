@@ -5,18 +5,32 @@ import { MockDebugSession } from './mockDebug';
 import { FileAccessor } from './mockRuntime';
 
 export function activateSolidityDebug(context: vscode.ExtensionContext, factory: vscode.DebugAdapterDescriptorFactory) {
-    // register a configuration provider for 'mock' debug type
-    const provider = new SolidityConfigurationProvider();
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('solidity', provider));
+	// register a configuration provider for 'mock' debug type
+	const provider = new SolidityConfigurationProvider();
+	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('solidity', provider));
 
-    context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.getProgramName', config => {
-        return vscode.window.showInputBox({
-            placeHolder: "Please enter the name of a markdown file in the workspace folder",
-            value: "lib.sol"
-        });
-    }));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.getProgramName', async config => {
+		const fileList: { [releativePath: string]: vscode.Uri; } = {};
+		for (const iterator of vscode.workspace.workspaceFolders ?? []) {
+			const workspacePath = iterator.uri.fsPath;
+			const pattern = new vscode.RelativePattern(
+				workspacePath,
+				'**/*.sol'
+			);
+			const files = await vscode.workspace.findFiles(
+				pattern,
+				'**​/.vscode/**'
+			);
+			files.forEach((item) => {
+				fileList[item.path.replace(workspacePath, '')] = item;
+			});
+		}
+		return vscode.window.showQuickPick(Object.keys(fileList), {
+			placeHolder: "Please enter the name of a solidity file in the workspace folder"
+		});
+	}));
 
-    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('solidity', factory));
+	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('solidity', factory));
 }
 
 class SolidityConfigurationProvider implements vscode.DebugConfigurationProvider {

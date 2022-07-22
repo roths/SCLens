@@ -1,15 +1,15 @@
-'use strict'
-import { util } from '@remix-project/remix-lib'
-import { Storagelocation } from '../solidity-decoder/decodeInfo'
-import { TraceManager } from '../trace/traceManager'
-import { decodeMappingsKeys } from './mappingPreimages'
-import { StorageResolver } from './storageResolver'
-import { Transaction } from 'web3-core'
-import Web3 from 'web3'
+'use strict';
+import { util } from '@remix-project/remix-lib';
+import { Storagelocation } from '../solidity-decoder/decodeInfo';
+import { TraceManager } from '../trace/traceManager';
+import { decodeMappingsKeys } from './mappingPreimages';
+import { StorageResolver } from './storageResolver';
+import { Transaction } from 'web3-core';
+import Web3 from 'web3';
 
 export interface StorageChanges {
   [key: string]:
-  { key: string, value: string }
+  { key: string, value: string; };
 }
 /**
    * easier access to the storage resolver
@@ -17,21 +17,21 @@ export interface StorageChanges {
    * (TODO: one instance need to be shared over all the components)
    */
 export class StorageViewer {
-  context: { stepIndex: number, tx: Transaction, address: string }
-  storageResolver: StorageResolver
-  web3: Web3
-  initialMappingsLocationPromise: Promise<any> | null
-  currentMappingsLocationPromise: Promise<any> | null
-  storageChanges: StorageChanges
-  mappingsLocationChanges!: { [key: string]: { [key: string]: string } }
+  context: { stepIndex: number, tx: Transaction, address: string; };
+  storageResolver: StorageResolver;
+  web3: Web3;
+  initialMappingsLocationPromise: Promise<any> | null;
+  currentMappingsLocationPromise: Promise<any> | null;
+  storageChanges: StorageChanges;
+  mappingsLocationChanges!: { [key: string]: { [key: string]: string; }; };
 
-  constructor(_context: { stepIndex: number, tx: Transaction, address: string }, _storageResolver: StorageResolver, _traceManager: TraceManager) {
-    this.context = _context
-    this.storageResolver = _storageResolver
-    this.web3 = this.storageResolver.web3
-    this.initialMappingsLocationPromise = null
-    this.currentMappingsLocationPromise = null
-    this.storageChanges = _traceManager.accumulateStorageChanges(this.context.stepIndex, this.context.address, {})
+  constructor(_context: { stepIndex: number, tx: Transaction, address: string; }, _storageResolver: StorageResolver, _traceManager: TraceManager) {
+    this.context = _context;
+    this.storageResolver = _storageResolver;
+    this.web3 = this.storageResolver.web3;
+    this.initialMappingsLocationPromise = null;
+    this.currentMappingsLocationPromise = null;
+    this.storageChanges = _traceManager.accumulateStorageChanges(this.context.stepIndex, this.context.address, {});
   }
 
   /**
@@ -43,9 +43,9 @@ export class StorageViewer {
   storageRange() {
     return new Promise((resolve, reject) => {
       this.storageResolver.storageRange(this.context.tx, this.context.stepIndex, this.context.address).then((storage) => {
-        resolve(Object.assign({}, storage, this.storageChanges))
-      }).catch(reject)
-    })
+        resolve(Object.assign({}, storage, this.storageChanges));
+      }).catch(reject);
+    });
   }
 
   /**
@@ -54,13 +54,13 @@ export class StorageViewer {
     * @param {Function} - callback - {key, hashedKey, value} -
     */
   storageSlot(slot: string, callback: any) {
-    const hashed = util.sha3_256(slot)
+    const hashed = util.sha3_256(slot);
     if (this.storageChanges[hashed]) {
-      return callback(null, this.storageChanges[hashed])
+      return callback(null, this.storageChanges[hashed]);
     }
     this.storageResolver.storageSlot(hashed, this.context.tx, this.context.stepIndex, this.context.address).then((storage) => {
-      callback(null, storage)
-    }).catch(callback)
+      callback(null, storage);
+    }).catch(callback);
   }
 
   /**
@@ -70,7 +70,7 @@ export class StorageViewer {
     * @return {Bool} - return True if the storage at @arg address is complete
     */
   isComplete(address: string) {
-    return this.storageResolver.isComplete(address)
+    return this.storageResolver.isComplete(address);
   }
 
   /**
@@ -80,9 +80,9 @@ export class StorageViewer {
     */
   async initialMappingsLocation(corrections: Storagelocation[]) {
     if (!this.initialMappingsLocationPromise) {
-      this.initialMappingsLocationPromise = this.storageResolver.initialPreimagesMappings(this.context.tx, this.context.stepIndex, this.context.address, corrections)
+      this.initialMappingsLocationPromise = this.storageResolver.initialPreimagesMappings(this.context.tx, this.context.stepIndex, this.context.address, corrections);
     }
-    return this.initialMappingsLocationPromise
+    return this.initialMappingsLocationPromise;
   }
 
   /**
@@ -90,13 +90,13 @@ export class StorageViewer {
     *
     * @param {Array} corrections - used in case the calculated sha3 has been modifyed before SSTORE (notably used for struct in mapping).
     */
-  async mappingsLocation(corrections: Storagelocation[]): Promise<{ [key: string]: { [key: string]: string } }> {
+  async mappingsLocation(corrections: Storagelocation[]): Promise<{ [key: string]: { [key: string]: string; }; }> {
     if (!this.currentMappingsLocationPromise) {
       this.currentMappingsLocationPromise = new Promise((resolve, reject) => {
-        this.extractMappingsLocationChanges(this.storageChanges, corrections).then(resolve).catch(reject)
-      })
+        this.extractMappingsLocationChanges(this.storageChanges, corrections).then(resolve).catch(reject);
+      });
     }
-    return this.currentMappingsLocationPromise
+    return this.currentMappingsLocationPromise;
   }
 
   /**
@@ -106,10 +106,10 @@ export class StorageViewer {
     */
   async extractMappingsLocationChanges(storageChanges: StorageChanges, corrections: Storagelocation[]) {
     if (this.mappingsLocationChanges) {
-      return this.mappingsLocationChanges
+      return this.mappingsLocationChanges;
     }
-    const mappings = await decodeMappingsKeys(this.web3, storageChanges, corrections)
-    this.mappingsLocationChanges = mappings
-    return this.mappingsLocationChanges
+    const mappings = await decodeMappingsKeys(this.web3, storageChanges, corrections);
+    this.mappingsLocationChanges = mappings;
+    return this.mappingsLocationChanges;
   }
 }

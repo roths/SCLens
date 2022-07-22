@@ -1,17 +1,17 @@
-'use strict'
-import { ValueType } from './ValueType'
-import { extractHexByteSlice } from './util'
+'use strict';
+import { ValueType } from './ValueType';
+import { extractHexByteSlice } from './util';
 
 export class Bool extends ValueType {
-  constructor () {
-    super(1, 1, 'bool')
+  constructor() {
+    super(1, 1, 'bool');
   }
 
-  decodeValue (value: string) {
+  decodeValue(value: string) {
     if (!value) {
-      return false
+      return false;
     }
-    value = extractHexByteSlice(value, this.storageBytes, 0)
-    return value !== '00'
+    value = extractHexByteSlice(value, this.storageBytes, 0);
+    return value !== '00';
   }
 }

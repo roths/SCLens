@@ -9,7 +9,7 @@ export interface Imported {
 }
 
 interface PreviouslyHandledImports {
-    [filePath: string]: Imported
+    [filePath: string]: Imported;
 }
 
 interface Handler {
