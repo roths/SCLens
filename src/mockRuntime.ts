@@ -4,6 +4,14 @@
 
 import { EventEmitter } from 'events';
 import { TextDecoder, TextEncoder } from 'util';
+import { SolcCompiler } from './common/solcCompiler';
+import * as workspaceUtil from './client/workspaceUtil';
+import * as vscode from 'vscode';
+import { CompilationResult } from './common/type';
+import Web3 from 'web3';
+import { init } from '@remix-project/remix-debug';
+import { TraceManager } from './trace/traceManager';
+import { CodeManager } from './code/codeManager';
 
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -87,7 +95,7 @@ interface Word {
 export function timeout(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
-  
+
 
 /**
  * A Mock runtime with minimal debugger functionality.
@@ -148,17 +156,44 @@ export class MockRuntime extends EventEmitter {
 
 	private namedException: string | undefined;
 	private otherExceptions = false;
+	// web3
+	private solc: SolcCompiler;
+	private compilationResult!: CompilationResult;
+	private web3: Web3;
+	private traceManager: TraceManager;
+	private codeManager: CodeManager;
 
-	constructor(private fileAccessor: FileAccessor) {
+	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
 		super();
+		this.solc = new SolcCompiler(context.extensionPath);
+		this.web3 = new Web3('https://remix-ropsten.ethdevops.io');
+		init.extend(this.web3);
+		this.traceManager = new TraceManager(this.web3);
+		this.codeManager = new CodeManager(this.web3, this.traceManager);
 	}
 
 	/**
 	 * Start executing the given program.
 	 */
 	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
+		const contractPath = this.normalizePathAndCasing(program);
 
-		await this.loadSource(this.normalizePathAndCasing(program));
+		await this.loadSource(contractPath);
+		// diagnostic, light and fast
+		this.compilationResult = await this.solc.diagnostic(contractPath);
+        console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
+		if (this.compilationResult.errors) {
+			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
+			return;
+		}
+		// compile
+		this.compilationResult = await this.solc.compile(contractPath);
+		if (this.compilationResult.errors) {
+			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
+			return;
+		}
+
+		await this.resolveTrace();
 
 		if (debug) {
 			await this.verifyBreakpoints(this._sourceFile);
@@ -346,8 +381,6 @@ export class MockRuntime extends EventEmitter {
 		bps.push(bp);
 
 		await this.verifyBreakpoints(path);
-		// set bp in eth debugger
-		this.web3breakPointManager.add({ fileName: path, row: line });
 
 		return bp;
 	}
@@ -475,6 +508,12 @@ export class MockRuntime extends EventEmitter {
 			this._sourceFile = this.normalizePathAndCasing(file);
 			this.initializeContents(await this.fileAccessor.readFile(file));
 		}
+	}
+
+
+	private async resolveTrace(txHash: string = "0x032a84ded19932f05c3536690bcbc5c17cbd05e3790c7c0ae67a33a92d4987c1") {
+		const tx = await this.web3.eth.getTransaction(txHash);
+		await this.traceManager.resolveTrace(tx);
 	}
 
 	private initializeContents(memory: Uint8Array) {

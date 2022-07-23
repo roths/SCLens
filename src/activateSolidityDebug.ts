@@ -1,3 +1,4 @@
+import path from 'path';
 import { TextEncoder } from 'util';
 import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
@@ -22,7 +23,7 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 				'**​/.vscode/**'
 			);
 			files.forEach((item) => {
-				fileList[item.path.replace(workspacePath, '')] = item;
+				fileList[item.path.replace(workspacePath + path.sep, '')] = item;
 			});
 		}
 		return vscode.window.showQuickPick(Object.keys(fileList), {
@@ -89,7 +90,12 @@ function pathToUri(path: string) {
 
 export class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
+	private context: vscode.ExtensionContext;
+	
+	constructor(context: vscode.ExtensionContext) {
+		this.context = context;
+	}
 	createDebugAdapterDescriptor(_session: vscode.DebugSession): ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new MockDebugSession(workspaceFileAccessor));
+		return new vscode.DebugAdapterInlineImplementation(new MockDebugSession(this.context, workspaceFileAccessor));
 	}
 }

@@ -36,21 +36,6 @@ export class CodeManager {
         this.traceManager = traceManager;
     }
 
-    async getInstructions(contractAddress: string): Promise<BlockChainInstruction> {
-        if (!this.instructionsCache[contractAddress]) {
-            // bytecode like 0x....
-            const codeFromChain = await this.web3.eth.getCode(contractAddress);
-            // TODO: hardfork
-            const [code, instructionsIndexByBytesOffset] = nameOpCodes(Buffer.from(codeFromChain.substring(2), 'hex'), 'london');
-            this.instructionsCache[contractAddress] = {
-                instructions: code,
-                instructionsIndexByBytesOffset: instructionsIndexByBytesOffset,
-                bytecode: codeFromChain
-            };
-        }
-        return this.instructionsCache[contractAddress];
-    }
-
     async getSourceLocationByVMTraceIndex(contractAddress: string, vmTraceIndex: number, contracts: CompiledContractObj) {
         const instructions = await this.getInstructions(contractAddress);
         const { sourceMap } = this.getSourceMap(contractAddress, instructions.bytecode, contracts) ?? {};
@@ -92,6 +77,21 @@ export class CodeManager {
             vmTraceIndex = vmTraceIndex - 1;
         }
         return location;
+    }
+
+    private async getInstructions(contractAddress: string): Promise<BlockChainInstruction> {
+        if (!this.instructionsCache[contractAddress]) {
+            // bytecode like 0x....
+            const codeFromChain = await this.web3.eth.getCode(contractAddress);
+            // TODO: hardfork
+            const [code, instructionsIndexByBytesOffset] = nameOpCodes(Buffer.from(codeFromChain.substring(2), 'hex'), 'london');
+            this.instructionsCache[contractAddress] = {
+                instructions: code,
+                instructionsIndexByBytesOffset: instructionsIndexByBytesOffset,
+                bytecode: codeFromChain
+            };
+        }
+        return this.instructionsCache[contractAddress];
     }
 
     private async getInstructionIndex(contractAddress: string, vmTraceIndex: number) {

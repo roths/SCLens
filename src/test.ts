@@ -80,14 +80,14 @@ export async function deploy() {
 async function compile(path: string = "/Users/luoqiaoyou/vscode/helloworld/",
     file: string = "/Users/luoqiaoyou/Downloads/sol/test.sol",
     contractName: string = "Storage") {
-    const solc = new SolcCompiler(path, path);
+    const solc = new SolcCompiler(path);
     const compilationResult = await solc.compile(file);
     return compilationResult.contracts![file][contractName];
 }
 
 async function compileAll(path: string = "/Users/luoqiaoyou/vscode/helloworld/",
     file: string = "/Users/luoqiaoyou/Downloads/sol/test.sol") {
-    const solc = new SolcCompiler(path, path);
+    const solc = new SolcCompiler(path);
     const compilationResult = await solc.compile(file);
     return compilationResult;
 }

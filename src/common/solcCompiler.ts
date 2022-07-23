@@ -5,20 +5,28 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CompilationResult, Source, CompilationError } from './type';
 import { ImportResolver } from './importResolver';
+import * as semver from 'semver';
 
-
+interface SolcVersionMap {
+    // 0.8.15: "soljson-v0.8.15+commit.e14f2714.js"
+    [version: string]: string;
+}
 export class SolcCompiler {
 
-    private rootPath: string;
     private cachePath: string;
     private compiler: any;
-    private compilerVersion: string = 'soljson-v0.8.15+commit.e14f2714.js';
+    private selectedCompilerVersion: string = 'recommend';
+    usedCompilerVersion: string = '';
     private resolver: ImportResolver;
+    private solcVersionMap?: SolcVersionMap;
 
-    constructor(rootPath: string, cachePath: string) {
-        this.rootPath = rootPath;
+    constructor(cachePath: string) {
         this.cachePath = cachePath;
         this.resolver = new ImportResolver(cachePath);
+    }
+
+    public switchVersion(newVersion: string) {
+        this.selectedCompilerVersion = newVersion;
     }
 
     public async compile(contractPath: string) {
@@ -64,7 +72,19 @@ export class SolcCompiler {
     }
 
     private async execSolc(sources: Source, settings: any): Promise<CompilationResult> {
-        await this.prepareCompiler(this.compilerVersion);
+        let compilerVersion: string | null = this.selectedCompilerVersion;
+        if (compilerVersion === "recommend") {
+            compilerVersion = await this.getRecommendVersion(sources);
+        }
+        if (compilerVersion === null) {
+            return {
+                errors: [{
+                    formattedMessage: 'Can not find a match Solidity compile version:\n' + this.formatCompilerVersionErrorMsg(sources),
+                    severity: 'error', mode: 'panic'
+                }]
+            };
+        }
+        await this.prepareCompiler(compilerVersion);
 
         const compilation = {
             language: 'Solidity',
@@ -94,14 +114,13 @@ export class SolcCompiler {
             if (result.errors) {
                 result.errors.forEach((err) => checkIfFatalError(err));
             }
-            if (hasFatalErrors) {
-                result = { errors: [{ formattedMessage: 'Uncaught Solidity compile exception:\n' + result.errors, severity: 'error', mode: 'panic' }] };
-            } else if (missingImports.length > 0) {
+
+            if (!hasFatalErrors && missingImports.length > 0) {
                 const failureImport = await this.resolveImport(sources, missingImports);
                 if (failureImport.length === 0) {
                     return this.execSolc(sources, settings);
                 } else {
-                    return { errors: [{ formattedMessage: 'Fail to resolve import:\n' + failureImport, severity: 'error', mode: 'panic' }] };
+                    return { errors: [{ formattedMessage: 'Fail to resolve import:\n' + JSON.stringify(failureImport), severity: 'error', mode: 'panic' }] };
                 }
             }
         } catch (exception) {
@@ -109,6 +128,42 @@ export class SolcCompiler {
         }
 
         return result;
+    }
+
+    private async getRecommendVersion(sources: Source) {
+        const pragmaRegx = /pragma solidity [\S ]+;/g;
+        const semverList = [];
+        // analyse semantic version from source code
+        for (const key of Object.keys(sources)) {
+            const match = sources[key].content.match(pragmaRegx);
+            if (match) {
+                const semverMatch = match[0].match(/[>=<]*[ ]*([0-9]+.[0-9]+.[0-9]+)/g);
+                if (semverMatch) {
+                    for (let index = 0; index < semverMatch.length; index++) {
+                        semverList.push(semverMatch[index].replace(/ /g, ''));
+                    }
+                }
+            }
+        }
+        // fetch candidate version list
+        if (!this.solcVersionMap) {
+            this.solcVersionMap = await SolcHttpClient.fetchVersions();
+        }
+        // find a match one
+        const matchKey = semver.maxSatisfying(Object.keys(this.solcVersionMap), semverList.join(' '));
+        return matchKey === null ? null : this.solcVersionMap[matchKey];
+    }
+
+    private formatCompilerVersionErrorMsg(sources: Source) {
+        let errorMsg = "";
+        const pragmaRegx = /pragma solidity [\S ]+;/g;
+        for (const key of Object.keys(sources)) {
+            const match = sources[key].content.match(pragmaRegx);
+            if (match) {
+                errorMsg += `${key} require : ${match[0]}\n`;
+            }
+        }
+        return errorMsg;
     }
 
     private async resolveImport(sources: Source, missingImports: string[]) {
@@ -124,23 +179,27 @@ export class SolcCompiler {
         return failureImport;
     }
 
-    private async prepareCompiler(version: string): Promise<boolean> {
-        const destFile = path.resolve(path.join(this.cachePath, version));
+    private async prepareCompiler(selectedVersion: string): Promise<boolean> {
+        const destFile = path.resolve(path.join(this.cachePath, "solcCache", selectedVersion));
+        await fs.promises.mkdir(path.dirname(destFile), { recursive: true });
+
+        // download js file
         if (!fs.existsSync(destFile)) {
             const isSuccess = await vscode.window.withProgress({ location: vscode.ProgressLocation.Window }, async (progress) => {
                 progress.report({
-                    message: `Download Solidity Compiler, version: '${version}' ...`,
+                    message: `Download Solidity Compiler, version: '${selectedVersion}' ...`,
                 });
 
-                return await SolcHttpClient.downloadCompiler(version, destFile);
+                return await SolcHttpClient.downloadCompiler(selectedVersion, destFile);
             });
             if (!isSuccess) {
                 return false;
             }
         }
-        if (this.compiler === undefined || version !== this.compilerVersion) {
+        // reload instance
+        if (this.compiler === undefined || selectedVersion !== this.usedCompilerVersion) {
             this.compiler = solc.setupMethods(require(destFile));
-            this.compilerVersion = version;
+            this.usedCompilerVersion = selectedVersion;
         }
         return true;
     }
@@ -180,7 +239,7 @@ export class SolcHttpClient {
         return Downloader.fromHttp(url, destFile);
     }
 
-    static fetchVersions(): Promise<any> {
+    static fetchVersions(): Promise<SolcVersionMap> {
         const url = 'https://binaries.soliditylang.org/bin/list.json';
         return new Promise((resolve, reject) => {
             https.get(url, (res) => {
