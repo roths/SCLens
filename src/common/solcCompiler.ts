@@ -15,7 +15,7 @@ export class SolcCompiler {
 
     private cachePath: string;
     private compiler: any;
-    private selectedCompilerVersion: string = 'recommend';
+    selectedCompilerVersion: string = 'recommend';
     usedCompilerVersion: string = '';
     private resolver: ImportResolver;
     private solcVersionMap?: SolcVersionMap;
@@ -23,10 +23,6 @@ export class SolcCompiler {
     constructor(cachePath: string) {
         this.cachePath = cachePath;
         this.resolver = new ImportResolver(cachePath);
-    }
-
-    public switchVersion(newVersion: string) {
-        this.selectedCompilerVersion = newVersion;
     }
 
     public async compile(contractPath: string) {

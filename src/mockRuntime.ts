@@ -7,11 +7,12 @@ import { TextDecoder, TextEncoder } from 'util';
 import { SolcCompiler } from './common/solcCompiler';
 import * as workspaceUtil from './client/workspaceUtil';
 import * as vscode from 'vscode';
-import { CompilationResult } from './common/type';
+import { CompilationResult, CompiledContract, CompiledContractObj } from './common/type';
 import Web3 from 'web3';
 import { init } from '@remix-project/remix-debug';
 import { TraceManager } from './trace/traceManager';
 import { CodeManager } from './code/codeManager';
+import { UserContext } from './userContext';
 
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -162,11 +163,14 @@ export class MockRuntime extends EventEmitter {
 	private web3: Web3;
 	private traceManager: TraceManager;
 	private codeManager: CodeManager;
+	private userContext: UserContext = new UserContext();
 
 	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
 		super();
 		this.solc = new SolcCompiler(context.extensionPath);
-		this.web3 = new Web3('https://remix-ropsten.ethdevops.io');
+		this.web3 = new Web3('https://remix-goerli.ethdevops.io');
+		// this.web3 = new Web3('https://ropsten.infura.io/v3/4c32d98b849c4310af378437be8128e5');
+		// this.web3 = new Web3('http://192.168.0.155:8545');
 		init.extend(this.web3);
 		this.traceManager = new TraceManager(this.web3);
 		this.codeManager = new CodeManager(this.web3, this.traceManager);
@@ -179,21 +183,53 @@ export class MockRuntime extends EventEmitter {
 		const contractPath = this.normalizePathAndCasing(program);
 
 		await this.loadSource(contractPath);
+		// update selectedCompilerVersion
+		this.solc.selectedCompilerVersion = this.userContext.selectedCompilerVersion;
 		// diagnostic, light and fast
 		this.compilationResult = await this.solc.diagnostic(contractPath);
-        console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
+		console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
 		if (this.compilationResult.errors) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
 			return;
 		}
 		// compile
+		console.info("compile *.sol file:" + contractPath);
 		this.compilationResult = await this.solc.compile(contractPath);
 		if (this.compilationResult.errors) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
 			return;
 		}
+		// depoly
+		let contractAddress: string | null = null;
+		for (const [contractName, compiledContract] of Object.entries(this.compilationResult.contracts![contractPath])) {
+			const deployBytecode = compiledContract.evm.deployedBytecode.object;
+			contractAddress = this.userContext.findDeployHistory(contractPath, contractName, deployBytecode);
+			if (!contractAddress) {
+				console.info(`depoly ${contractName} contract in blockchain`);
+				contractAddress = await this.deploy(compiledContract);
+				if (!contractAddress) {
+					vscode.window.showErrorMessage(`Fail to deploy contract: ${contractName} in ${contractPath}`);
+					return;
+				} else {
+					this.userContext.addDeployHisory(contractPath, contractName, deployBytecode, contractAddress);
+				}
+			} else {
+				console.info("contract already deployed in contractAddress:" + contractAddress);
+			}
+		}
+		// TODO：register completion items
+		// invoke
+		console.info("invoke contract method");
+		let txHash: string | null = null;
+		txHash = await this.invoke(this.compilationResult.contracts!['/Users/luoqiaoyou/Downloads/sol/test.sol']['Storage'].abi,
+			contractAddress!,
+			['store', 100]);
+		if (!txHash) {
+			vscode.window.showErrorMessage(`Fail to send transaction`);
+			return;
+		}
 
-		await this.resolveTrace();
+		await this.resolveTrace(txHash);
 
 		if (debug) {
 			await this.verifyBreakpoints(this._sourceFile);
@@ -207,6 +243,76 @@ export class MockRuntime extends EventEmitter {
 		} else {
 			this.continue(false);
 		}
+	}
+
+	private async deploy(compiledContract: CompiledContract) {
+		const bytecode = compiledContract.evm.bytecode.object;
+		const abi = compiledContract.abi;
+		const contract = new this.web3.eth.Contract(abi as any);
+		const contractTx = contract.deploy({
+			data: bytecode,
+			arguments: [5],
+		});
+		const { accountAddress, pk } = this.userContext.getAccount();
+		const deployTransaction = await this.web3.eth.accounts.signTransaction(
+			{
+				// nonce: txCount + 3,
+				from: accountAddress,
+				data: contractTx.encodeABI(),
+				gas: 300000,
+			},
+			pk
+		);
+		const promise = this.web3.eth.sendSignedTransaction(deployTransaction.rawTransaction!);
+		promise.on('transactionHash', function (hash) {
+			console.log('transactionHash');
+			console.log(hash);
+		}).on('sent', function (sent) {
+			console.log('sent');
+			console.log(sent);
+		}).on('error', console.error);
+
+		const createReceipt = await promise;
+		console.log('Contract createReceipt:', createReceipt);
+		return createReceipt.contractAddress ?? null;
+	}
+
+	private async invoke(contractAbi: any, contractAddress: string, methodInfo: any[]) {
+		const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
+		const [methodName, ...params] = methodInfo;
+		const { accountAddress, pk } = this.userContext.getAccount();
+		console.log(
+			`Calling contract function '${methodName}' in address ${contractAddress} with params:${params.join(',')}`
+		);
+		const encoded = contract.methods[methodName](...params).encodeABI();
+		// find cache
+		const txHashCache = this.userContext.findTxHistory(contractAddress, encoded);
+		if (txHashCache) {
+			return txHashCache;
+		}
+		// send new tx
+		const tx = await this.web3.eth.accounts.signTransaction(
+			{
+				from: accountAddress,
+				to: contractAddress,
+				data: encoded,
+				gas: '3000000',
+			},
+			pk
+		);
+		const promise = this.web3.eth.sendSignedTransaction(tx.rawTransaction!);
+		promise.on('transactionHash', function (hash) {
+			console.log('transactionHash');
+			console.log(hash);
+		}).on('sent', function (sent) {
+			console.log('sent');
+			console.log(sent);
+		}).on('error', console.error);
+		const createReceipt = await promise;
+		console.log('invoke successfull with createReceipt:', createReceipt);
+		// store cache
+		this.userContext.addTxHistory(contractAddress, encoded, createReceipt.transactionHash);
+		return createReceipt.transactionHash;
 	}
 
 	/**
@@ -511,9 +617,10 @@ export class MockRuntime extends EventEmitter {
 	}
 
 
-	private async resolveTrace(txHash: string = "0x032a84ded19932f05c3536690bcbc5c17cbd05e3790c7c0ae67a33a92d4987c1") {
+	private async resolveTrace(txHash: string) {
 		const tx = await this.web3.eth.getTransaction(txHash);
 		await this.traceManager.resolveTrace(tx);
+		console.log(this.traceManager);
 	}
 
 	private initializeContents(memory: Uint8Array) {
