@@ -12,7 +12,7 @@ import Web3 from 'web3';
 import { init } from '@remix-project/remix-debug';
 import { TraceManager } from './trace/traceManager';
 import { CodeManager } from './code/codeManager';
-import { UserContext } from './userContext';
+import { userContext } from './common/userContext';
 
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -163,14 +163,11 @@ export class MockRuntime extends EventEmitter {
 	private web3: Web3;
 	private traceManager: TraceManager;
 	private codeManager: CodeManager;
-	private userContext: UserContext = new UserContext();
 
 	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
 		super();
 		this.solc = new SolcCompiler(context.extensionPath);
-		this.web3 = new Web3('https://remix-goerli.ethdevops.io');
-		// this.web3 = new Web3('https://ropsten.infura.io/v3/4c32d98b849c4310af378437be8128e5');
-		// this.web3 = new Web3('http://192.168.0.155:8545');
+		this.web3 = new Web3(userContext.network);
 		init.extend(this.web3);
 		this.traceManager = new TraceManager(this.web3);
 		this.codeManager = new CodeManager(this.web3, this.traceManager);
@@ -184,7 +181,7 @@ export class MockRuntime extends EventEmitter {
 
 		await this.loadSource(contractPath);
 		// update selectedCompilerVersion
-		this.solc.selectedCompilerVersion = this.userContext.selectedCompilerVersion;
+		this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
 		// diagnostic, light and fast
 		this.compilationResult = await this.solc.diagnostic(contractPath);
 		console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
@@ -203,7 +200,22 @@ export class MockRuntime extends EventEmitter {
 		let contractAddress: string | null = null;
 		for (const [contractName, compiledContract] of Object.entries(this.compilationResult.contracts![contractPath])) {
 			const deployBytecode = compiledContract.evm.deployedBytecode.object;
-			contractAddress = this.userContext.findDeployHistory(contractPath, contractName, deployBytecode);
+			contractAddress = userContext.findContractHistory(contractPath, contractName, deployBytecode);
+			// notify user whether use cache
+			if (contractAddress) {
+				// const answer = await vscode.window.showInformationMessage(
+				// 	"The contract has not changed and has been deployed, whether to use the last deployed contract address?",
+				// 	"Yes", "No");
+
+				const answer = await vscode.window.showQuickPick(["Yes", "No"], {
+					placeHolder: "The contract has not changed and has been deployed, whether to use the last deployed contract address?"
+				});
+				if (answer === 'Yes') {
+					console.info("use last deployed contract address:" + contractAddress);
+				} else {
+					contractAddress = null;
+				}
+			}
 			if (!contractAddress) {
 				console.info(`depoly ${contractName} contract in blockchain`);
 				contractAddress = await this.deploy(compiledContract);
@@ -211,25 +223,31 @@ export class MockRuntime extends EventEmitter {
 					vscode.window.showErrorMessage(`Fail to deploy contract: ${contractName} in ${contractPath}`);
 					return;
 				} else {
-					this.userContext.addDeployHisory(contractPath, contractName, deployBytecode, contractAddress);
+					userContext.addContractHisory(contractPath, contractName, deployBytecode, contractAddress);
 				}
-			} else {
-				console.info("contract already deployed in contractAddress:" + contractAddress);
 			}
 		}
 		// TODO：register completion items
-		// invoke
-		console.info("invoke contract method");
+		// TODO：let use decide whether debug a old tx or create a new one
 		let txHash: string | null = null;
-		txHash = await this.invoke(this.compilationResult.contracts!['/Users/luoqiaoyou/Downloads/sol/test.sol']['Storage'].abi,
-			contractAddress!,
-			['store', 100]);
-		if (!txHash) {
-			vscode.window.showErrorMessage(`Fail to send transaction`);
-			return;
+		const createTx = true;
+		if (createTx) {
+			// invoke
+			console.info("invoke contract method");
+			const functionName = 'store';
+			const params = [100];
+			txHash = await this.invoke(this.compilationResult.contracts!['/Users/luoqiaoyou/Downloads/sol/test.sol']['Storage'].abi,
+				contractAddress!,
+				[functionName, ...params]);
+			if (!txHash) {
+				vscode.window.showErrorMessage(`Fail to send transaction`);
+				return;
+			}
+			// store cache
+			userContext.addTxHistory(contractAddress!, txHash, `${functionName}(${params.join(', ')})`);
 		}
 
-		await this.resolveTrace(txHash);
+		await this.resolveTrace(txHash!);
 
 		if (debug) {
 			await this.verifyBreakpoints(this._sourceFile);
@@ -253,7 +271,7 @@ export class MockRuntime extends EventEmitter {
 			data: bytecode,
 			arguments: [5],
 		});
-		const { accountAddress, pk } = this.userContext.getAccount();
+		const { accountAddress, pk } = userContext.getAccount();
 		const deployTransaction = await this.web3.eth.accounts.signTransaction(
 			{
 				// nonce: txCount + 3,
@@ -280,17 +298,11 @@ export class MockRuntime extends EventEmitter {
 	private async invoke(contractAbi: any, contractAddress: string, methodInfo: any[]) {
 		const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
 		const [methodName, ...params] = methodInfo;
-		const { accountAddress, pk } = this.userContext.getAccount();
+		const { accountAddress, pk } = userContext.getAccount();
 		console.log(
 			`Calling contract function '${methodName}' in address ${contractAddress} with params:${params.join(',')}`
 		);
 		const encoded = contract.methods[methodName](...params).encodeABI();
-		// find cache
-		const txHashCache = this.userContext.findTxHistory(contractAddress, encoded);
-		if (txHashCache) {
-			return txHashCache;
-		}
-		// send new tx
 		const tx = await this.web3.eth.accounts.signTransaction(
 			{
 				from: accountAddress,
@@ -310,8 +322,6 @@ export class MockRuntime extends EventEmitter {
 		}).on('error', console.error);
 		const createReceipt = await promise;
 		console.log('invoke successfull with createReceipt:', createReceipt);
-		// store cache
-		this.userContext.addTxHistory(contractAddress, encoded, createReceipt.transactionHash);
 		return createReceipt.transactionHash;
 	}
 

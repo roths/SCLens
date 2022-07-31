@@ -155,7 +155,74 @@
         ],
         "configuration": "./solidity.configuration.json"
       }
-    ]
+    ],
+    "commands": [
+      {
+				"command": "extension.solidity-debug.copyContractAddress",
+				"title": "Copy Contract Address",
+				"shortTitle": "Copy",
+				"enablement": "view == deployHistory && viewItem == contract",
+				"icon": "asset/copy.svg",
+				"when": "view == deployHistory && viewItem == contract"
+			},
+      {
+				"command": "extension.solidity-debug.debugContract",
+				"title": "Debug Contract",
+				"shortTitle": "Debug",
+				"enablement": "view == deployHistory && viewItem == contract",
+				"icon": "asset/debug.svg",
+				"when": "view == deployHistory && viewItem == contract"
+			},
+      {
+				"command": "extension.solidity-debug.copyTxHash",
+				"title": "Copy Transaction Hash",
+				"shortTitle": "Copy",
+				"enablement": "view == deployHistory && viewItem == transaction",
+				"icon": "asset/copy.svg",
+				"when": "view == deployHistory && viewItem == transaction"
+			},
+      {
+				"command": "extension.solidity-debug.debugTransaction",
+				"title": "Debug Transaction",
+				"shortTitle": "Debug",
+				"enablement": "view == deployHistory && viewItem == transaction",
+				"icon": "asset/debug.svg",
+				"when": "view == deployHistory && viewItem == transaction"
+			}
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+					"command": "extension.solidity-debug.copyContractAddress",
+					"when": "view == deployHistory && viewItem == contract",
+					"group": "inline@2"
+				},
+        {
+					"command": "extension.solidity-debug.debugContract",
+					"when": "view == deployHistory && viewItem == contract",
+					"group": "inline@1"
+				},
+        {
+					"command": "extension.solidity-debug.copyTxHash",
+					"when": "view == deployHistory && viewItem == transaction",
+					"group": "inline@2"
+				},
+        {
+					"command": "extension.solidity-debug.debugTransaction",
+					"when": "view == deployHistory && viewItem == transaction",
+					"group": "inline@1"
+				}
+      ]
+    },
+    "views": {
+      "debug": [{
+        "id": "deployHistory",
+        "name": "Contract Deploy History",
+        "when": "workspaceHasSolidity",
+        "icon": "asset/smart_contract.svg",
+        "contextualTitle": "Contract Deploy History Explorer"
+      }]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

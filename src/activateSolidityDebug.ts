@@ -4,11 +4,11 @@ import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
 import { MockDebugSession } from './mockDebug';
 import { FileAccessor } from './mockRuntime';
+import { HistoryTreeViewDataProvider, HistoryItem } from './client/HistoryTreeView';
 
 export function activateSolidityDebug(context: vscode.ExtensionContext, factory: vscode.DebugAdapterDescriptorFactory) {
 	// register a configuration provider for 'mock' debug type
-	const provider = new SolidityConfigurationProvider();
-	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('solidity', provider));
+	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('solidity', new SolidityConfigurationProvider()));
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.getProgramName', async config => {
 		const fileList: { [releativePath: string]: vscode.Uri; } = {};
@@ -31,7 +31,28 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 		});
 	}));
 
+	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyContractAddress',
+		async (viewItem: HistoryItem) => {
+			vscode.env.clipboard.writeText(viewItem.data);
+			vscode.window.showInformationMessage('Contract Address Copied:' + viewItem.data);
+		}));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugContract',
+		async (viewItem: HistoryItem) => {
+			vscode.window.showInformationMessage('debugContract:' + viewItem.data);
+		}));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyTxHash',
+		async (viewItem: HistoryItem) => {
+			vscode.env.clipboard.writeText(viewItem.data);
+			vscode.window.showInformationMessage('Transaction Hash Copied:' + viewItem.data);
+		}));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugTransaction',
+		async (viewItem: HistoryItem) => {
+			console.log('debugTxHistory' + viewItem);
+		}));
+
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('solidity', factory));
+
+	context.subscriptions.push(vscode.window.registerTreeDataProvider(HistoryTreeViewDataProvider.viewId, new HistoryTreeViewDataProvider()));
 }
 
 class SolidityConfigurationProvider implements vscode.DebugConfigurationProvider {
@@ -91,7 +112,7 @@ function pathToUri(path: string) {
 export class InlineDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 
 	private context: vscode.ExtensionContext;
-	
+
 	constructor(context: vscode.ExtensionContext) {
 		this.context = context;
 	}
