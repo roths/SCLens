@@ -300,7 +300,7 @@ export type SolidityType = AddressType | BoolType | BytesType | BytesXType | Enu
   * @return {Object} - return the corresponding decoder or null on error
   */
 function parseType(type: string, stateDefinitions: StatesDefinitions, contractName: string, location: string):
-  SolidityType | null {
+  SolidityType {
 
   const currentType = typeClass(type);
   let decodeType = null;
@@ -345,9 +345,9 @@ function parseType(type: string, stateDefinitions: StatesDefinitions, contractNa
       decodeType = functionType();
       break;
     default:
-      console.log('unable to retrieve decode info of ' + type);
+      throw new Error('unable to retrieve decode info of ' + type);
   }
-  return decodeType;
+  return decodeType!;
 }
 export interface Storagelocation {
   offset: number,
@@ -355,7 +355,7 @@ export interface Storagelocation {
 }
 export interface TypesOffsets {
   name: string,
-  type: any,
+  type: SolidityType,
   constant: boolean,
   immutable: boolean,
   storagelocation: Storagelocation;

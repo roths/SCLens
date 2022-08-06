@@ -1,5 +1,6 @@
 'use strict'
 import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util'
+import { StorageViewer } from './storage/storageViewer';
 
 export function decodeIntFromHex (value, byteLength, signed) {
   let bigNumber = new BN(value, 16)
@@ -9,10 +10,10 @@ export function decodeIntFromHex (value, byteLength, signed) {
   return bigNumber.toString(10)
 }
 
-export function readFromStorage (slot, storageResolver): Promise<string> {
+export function readFromStorage (slot, storageViewer: StorageViewer): Promise<string> {
   const hexSlot = '0x' + normalizeHex(bufferToHex(slot))
   return new Promise((resolve, reject) => {
-    storageResolver.storageSlot(hexSlot, (error, slot) => {
+    storageViewer.storageSlot(hexSlot, (error, slot) => {
       if (error) {
         return reject(error)
       }
@@ -31,7 +32,7 @@ export function readFromStorage (slot, storageResolver): Promise<string> {
  * @param {Int} byteLength  - Length of the byte slice to extract
  * @param {Int} offsetFromLSB  - byte distance from the right end slot value to the right end of the byte slice
  */
-export function extractHexByteSlice (slotValue, byteLength, offsetFromLSB) {
+export function extractHexByteSlice (slotValue, byteLength: number, offsetFromLSB) {
   const offset = slotValue.length - 2 * offsetFromLSB - 2 * byteLength
   return slotValue.substr(offset, 2 * byteLength)
 }
@@ -43,10 +44,10 @@ export function extractHexByteSlice (slotValue, byteLength, offsetFromLSB) {
  * @param {Object} storageResolver  - storage resolver
  * @param {Int} byteLength  - Length of the byte slice to extract
  */
-export async function extractHexValue (location, storageResolver, byteLength) {
+export async function extractHexValue (location, storageViewer: StorageViewer, byteLength) {
   let slotvalue
   try {
-    slotvalue = await readFromStorage(location.slot, storageResolver)
+    slotvalue = await readFromStorage(location.slot, storageViewer)
   } catch (e) {
     return ''
   }

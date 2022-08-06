@@ -1,5 +1,5 @@
-import { ComplitionSources } from '../common/type';
-import { StorageResolver } from '../storage/storageResolver';
+import { ComplitionSources, VariableDeclarationAstNode } from '../common/type';
+import { StorageViewer } from '../storage/storageViewer';
 import { extractStatesDefinitions } from './astHelper';
 import { computeOffsets, TypesOffsets } from './decodeInfo';
 
@@ -10,12 +10,12 @@ import { computeOffsets, TypesOffsets } from './decodeInfo';
   * @param {Object} storageResolver  - resolve storage queries
   * @return {Map} - decoded state variable
   */
-export async function decodeState(stateVars: TypesOffsets[], storageResolver: StorageResolver) {
+export async function decodeState(stateVars: TypesOffsets[], storageViewer: StorageViewer) {
   const ret: { [key: string]: any; } = {};
   for (const k in stateVars) {
     const stateVar = stateVars[k];
     try {
-      const decoded = await stateVar.type.decodeFromStorage(stateVar.storagelocation, storageResolver);
+      const decoded = await stateVar.type.decodeFromStorage(stateVar.storagelocation, storageViewer);
       decoded.constant = stateVar.constant;
       decoded.immutable = stateVar.immutable;
       if (decoded.constant) {
@@ -25,7 +25,7 @@ export async function decodeState(stateVars: TypesOffsets[], storageResolver: St
         decoded.value = '<immutable>';
       }
       ret[stateVar.name] = decoded;
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       ret[stateVar.name] = { error: '<decoding failed - ' + e.message + '>' };
     }
@@ -46,7 +46,7 @@ export function extractStateVariables(contractName: string, sourcesList: Complit
     return [];
   }
   const types = states[contractName]!.stateVariables;
-  const offsets = computeOffsets(types, states, contractName, 'storage');
+  const offsets = computeOffsets(types as VariableDeclarationAstNode[], states, contractName, 'storage');
   if (!offsets) {
     return []; // TODO should maybe return an error
   }
@@ -61,10 +61,10 @@ export function extractStateVariables(contractName: string, sourcesList: Complit
   * @param {String} contractName  - contract for which state var should be resolved
   * @return {Map} - return the state of the contract
   */
-export async function solidityState(storageResolver: StorageResolver, astList: ComplitionSources, contractName: string) {
+export async function solidityState(storageViewer: StorageViewer, astList: ComplitionSources, contractName: string) {
   const stateVars = extractStateVariables(contractName, astList);
   try {
-    return await decodeState(stateVars, storageResolver);
+    return await decodeState(stateVars, storageViewer);
   } catch (e: any) {
     return { error: '<decoding failed - ' + e.message + '>' };
   }

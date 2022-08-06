@@ -237,8 +237,9 @@ export class MockDebugSession extends LoggingDebugSession {
 		this._configurationDone.notify();
 	}
 
-	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
+	protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
 		console.log(`disconnectRequest suspend: ${args.suspendDebuggee}, terminate: ${args.terminateDebuggee}`);
+		await this._runtime.end();
 	}
 
 	protected async attachRequest(response: DebugProtocol.AttachResponse, args: IAttachRequestArguments) {
@@ -367,7 +368,6 @@ export class MockDebugSession extends LoggingDebugSession {
 		response.body = {
 			threads: [
 				new Thread(MockDebugSession.threadID, "thread 1"),
-				new Thread(MockDebugSession.threadID + 1, "thread 2"),
 			]
 		};
 		this.sendResponse(response);
@@ -459,7 +459,7 @@ export class MockDebugSession extends LoggingDebugSession {
 
 		const v = this._variableHandles.get(args.variablesReference);
 		if (v === 'locals') {
-			vs = this._runtime.getLocalVariables();
+			vs = await this._runtime.getLocalVariables();
 		} else if (v === 'globals') {
 			if (request) {
 				this._cancellationTokens.set(request.seq, false);

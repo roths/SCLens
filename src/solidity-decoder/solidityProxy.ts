@@ -3,8 +3,10 @@ import { util } from '@remix-project/remix-lib';
 import { isContractCreation } from '../trace/traceHelper';
 import { extractStateVariables } from './stateDecoder';
 import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitions, StatesDefinitions } from './astHelper';
-import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract } from '../common/type';
+import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract, GeneratedSource } from '../common/type';
 import { TypesOffsets } from './decodeInfo';
+import { TraceManager } from '../trace/traceManager';
+import { SourceLocation } from '../code/codeManager';
 
 export interface ContractObject {
   name: string,
@@ -13,15 +15,15 @@ export interface ContractObject {
 
 export class SolidityProxy {
   cache;
-  getCurrentCalledAddressAt;
   getCode;
   sources!: ComplitionSources;
   contracts!: CompiledContractObj;
+  private traceManager: TraceManager;
 
-  constructor({ getCurrentCalledAddressAt, getCode }) {
+  constructor(traceManager: TraceManager, getCode) {
     this.cache = new Cache();
     this.reset({});
-    this.getCurrentCalledAddressAt = getCurrentCalledAddressAt;
+    this.traceManager = traceManager;
     this.getCode = getCode;
   }
 
@@ -52,7 +54,7 @@ export class SolidityProxy {
     * @param {Function} cb  - callback returns (error, contractName)
     */
   async contractObjectAt(vmTraceIndex: number) {
-    const address = this.getCurrentCalledAddressAt(vmTraceIndex);
+    const address = this.traceManager.getCurrentCalledAddressAt(vmTraceIndex)!;
     if (this.cache.contractObjectByAddress[address]) {
       return this.cache.contractObjectByAddress[address];
     }
@@ -108,7 +110,7 @@ export class SolidityProxy {
     * @param {Object} sourceLocation  - source location containing the 'file' to retrieve the AST from
     * @return {Object} - AST of the current file
     */
-  ast(sourceLocation, generatedSources) {
+  ast(sourceLocation:SourceLocation, generatedSources: GeneratedSource[] | null) {
     const file = this.fileNameFromIndex(sourceLocation.file);
     if (!file && generatedSources && generatedSources.length) {
       for (const source of generatedSources) {
