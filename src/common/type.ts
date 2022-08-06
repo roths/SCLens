@@ -1,3 +1,4 @@
+import { AbiItem } from "web3-utils";
 /// //////////////////////////////////////////////////////////
 /// ////////// Web3 api structure ////////////////////////////
 /// //////////////////////////////////////////////////////////
@@ -5,16 +6,16 @@
 /**
  * use for web3.debug.storageRangeAt
  */
- export interface Storage {
+export interface Storage {
     key: string,
-    value: string
+    value: string;
 }
 export interface StorageMap {
-    [key: string]: Storage
+    [key: string]: Storage;
 }
 export interface StorageRangeResult {
     nextKey: string,
-    storage: StorageMap
+    storage: StorageMap;
 }
 
 
@@ -41,19 +42,19 @@ export interface StructLog {
     // step cost
     gasCost: number,
     memory: string[],
-    memexpand?: string
+    memexpand?: string;
     op: string,
     pc: number,
     stack: string[],
     storage: {
         [key: string]: string;
-    }
+    };
 }
 
 export interface TraceTransaction {
     gas: number,
     returnValue: string,
-    structLogs: StructLog[]
+    structLogs: StructLog[];
 }
 
 /// //////////////////////////////////////////////////////////
@@ -778,7 +779,7 @@ export interface AstNodeAtt {
 /// ///////////
 export interface CompiledContract {
     /** The Ethereum Contract ABI. If empty, it is represented as an empty array. */
-    abi: ABIDescription[];
+    abi: AbiItem[];
     // See the Metadata Output documentation (serialised JSON string)
     metadata: string;
     /** User documentation (natural specification) */
@@ -821,72 +822,6 @@ export interface CompiledContract {
         wasm: string;
     };
 }
-
-/// //////
-// ABI //
-/// //////
-export type ABIDescription = FunctionDescription | EventDescription;
-
-export interface FunctionDescription {
-    /** Type of the method. default is 'function' */
-    type?: 'function' | 'constructor' | 'fallback' | 'receive';
-    /** The name of the function. Constructor and fallback function never have name */
-    name?: string;
-    /** List of parameters of the method. Fallback function doesn’t have inputs. */
-    inputs?: ABIParameter[];
-    /** List of the outputs parameters for the method, if any */
-    outputs?: ABIParameter[];
-    /** State mutability of the method */
-    stateMutability: 'pure' | 'view' | 'nonpayable' | 'payable';
-    /** true if function accepts Ether, false otherwise. Default is false */
-    payable?: boolean;
-    /** true if function is either pure or view, false otherwise. Default is false  */
-    constant?: boolean;
-}
-
-export interface EventDescription {
-    type: 'event';
-    name: string;
-    inputs: ABIParameter &
-    {
-        /** true if the field is part of the log’s topics, false if it one of the log’s data segment. */
-        indexed: boolean;
-    }[];
-    /** true if the event was declared as anonymous. */
-    anonymous: boolean;
-}
-
-export interface ABIParameter {
-    internalType: string;
-    /** The name of the parameter */
-    name: string;
-    /** The canonical type of the parameter */
-    type: ABITypeParameter;
-    /** Used for tuple types */
-    components?: ABIParameter[];
-}
-
-export type ABITypeParameter =
-    | 'uint'
-    | 'uint[]' // TODO : add <M>
-    | 'int'
-    | 'int[]' // TODO : add <M>
-    | 'address'
-    | 'address[]'
-    | 'bool'
-    | 'bool[]'
-    | 'fixed'
-    | 'fixed[]' // TODO : add <M>
-    | 'ufixed'
-    | 'ufixed[]' // TODO : add <M>
-    | 'bytes'
-    | 'bytes[]' // TODO : add <M>
-    | 'function'
-    | 'function[]'
-    | 'tuple'
-    | 'tuple[]'
-    | string; // Fallback
-
 /// ////////////////////////
 // NATURAL SPECIFICATION //
 /// ////////////////////////

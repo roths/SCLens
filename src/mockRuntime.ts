@@ -13,6 +13,9 @@ import { init } from '@remix-project/remix-debug';
 import { TraceManager } from './trace/traceManager';
 import { CodeManager } from './code/codeManager';
 import { userContext } from './common/userContext';
+import { AbiItem } from 'web3-utils';
+import { multiStepInput } from './client/multiStepInput';
+import * as fs from 'fs';
 
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -176,8 +179,18 @@ export class MockRuntime extends EventEmitter {
 	/**
 	 * Start executing the given program.
 	 */
-	public async start(program: string, stopOnEntry: boolean, debug: boolean): Promise<void> {
+	public async start(program: string, stopOnEntry: boolean, debug: boolean,
+		solidityConfig: {
+			contractAddress: string,
+			transactionHash: string;
+		} | undefined): Promise<void> {
+
 		const contractPath = this.normalizePathAndCasing(program);
+		let contractAddress: string | null = solidityConfig?.contractAddress ?? null;
+		let txHash: string | null = solidityConfig?.transactionHash ?? null;
+		const contractHistory = contractAddress !== null ? userContext.contractHistory[contractAddress] : null;
+		let contractName = contractHistory !== null ? contractHistory.contractName : null;
+
 
 		await this.loadSource(contractPath);
 		// update selectedCompilerVersion
@@ -197,54 +210,83 @@ export class MockRuntime extends EventEmitter {
 			return;
 		}
 		// depoly
-		let contractAddress: string | null = null;
-		for (const [contractName, compiledContract] of Object.entries(this.compilationResult.contracts![contractPath])) {
-			const deployBytecode = compiledContract.evm.deployedBytecode.object;
-			contractAddress = userContext.findContractHistory(contractPath, contractName, deployBytecode);
-			// notify user whether use cache
-			if (contractAddress) {
-				// const answer = await vscode.window.showInformationMessage(
-				// 	"The contract has not changed and has been deployed, whether to use the last deployed contract address?",
-				// 	"Yes", "No");
-
-				const answer = await vscode.window.showQuickPick(["Yes", "No"], {
-					placeHolder: "The contract has not changed and has been deployed, whether to use the last deployed contract address?"
-				});
-				if (answer === 'Yes') {
-					console.info("use last deployed contract address:" + contractAddress);
-				} else {
-					contractAddress = null;
+		if (contractAddress === null) {
+			for (const [itemContractName, itemCompiledContract] of Object.entries(this.compilationResult.contracts![contractPath])) {
+				const deployBytecode = itemCompiledContract.evm.deployedBytecode.object;
+				contractAddress = userContext.findContractHistory(contractPath, itemContractName, deployBytecode);
+				// notify user whether use cache
+				if (contractAddress) {
+					const answer = await vscode.window.showQuickPick(["Yes", "No"], {
+						placeHolder: `${itemContractName} contract no change, use the last deployed address?`
+					});
+					if (answer === 'Yes') {
+						console.info("use last deployed contract address:" + contractAddress);
+					} else if (answer === 'No') {
+						contractAddress = null;
+					} else {
+						//cancel
+						this.sendEvent('end');
+						return;
+					}
 				}
-			}
-			if (!contractAddress) {
-				console.info(`depoly ${contractName} contract in blockchain`);
-				contractAddress = await this.deploy(compiledContract);
 				if (!contractAddress) {
-					vscode.window.showErrorMessage(`Fail to deploy contract: ${contractName} in ${contractPath}`);
-					return;
-				} else {
-					userContext.addContractHisory(contractPath, contractName, deployBytecode, contractAddress);
+					console.info(`depoly ${itemContractName} contract in blockchain`);
+					contractAddress = await this.deploy(itemCompiledContract);
+					if (!contractAddress) {
+						vscode.window.showErrorMessage(`Fail to deploy contract: ${itemContractName} in ${contractPath}`);
+						return;
+					} else {
+						userContext.addContractHisory(contractPath, itemContractName, deployBytecode, contractAddress);
+					}
 				}
 			}
 		}
+		// whether solc bytecode match with history bytecode
+		if (contractHistory) {
+			const solcDeployBytecode = this.compilationResult.contracts![contractHistory.filePath][contractHistory.contractName].evm.deployedBytecode.object;
+			if (contractHistory.deployBytecode !== solcDeployBytecode) {
+				vscode.window.showInformationMessage(`Contract source not match with evm bytecode!`);
+			}
+		}
 		// TODO：register completion items
-		// TODO：let use decide whether debug a old tx or create a new one
-		let txHash: string | null = null;
-		const createTx = true;
-		if (createTx) {
+		// let user choice debug contract
+		if (contractName === null) {
+			const contractNameList = Object.keys(this.compilationResult.contracts![contractPath]);
+			if (contractNameList.length === 1) {
+				contractName = contractNameList[0];
+			} else {
+				const answer = await vscode.window.showQuickPick(contractNameList, {
+					placeHolder: "Choice a contract to debug"
+				});
+				if (!answer) {
+					// cancel
+					this.sendEvent('end');
+					return;
+				} else {
+					contractName = answer;
+				}
+			}
+		}
+		// new tx
+		if (txHash === null) {
+			// get method invoke data
+			const contractAbi = this.compilationResult.contracts![contractPath][contractName!].abi;
+			const callMethodData = await multiStepInput(contractAbi);
+			if (callMethodData.length === 0) {
+				// cancel
+				this.sendEvent('end');
+				return;
+			}
+
 			// invoke
-			console.info("invoke contract method");
-			const functionName = 'store';
-			const params = [100];
-			txHash = await this.invoke(this.compilationResult.contracts!['/Users/luoqiaoyou/Downloads/sol/test.sol']['Storage'].abi,
-				contractAddress!,
-				[functionName, ...params]);
+			console.info("invoke contract method", callMethodData);
+			txHash = await this.invoke(contractAbi, contractAddress!, callMethodData);
 			if (!txHash) {
 				vscode.window.showErrorMessage(`Fail to send transaction`);
 				return;
 			}
 			// store cache
-			userContext.addTxHistory(contractAddress!, txHash, `${functionName}(${params.join(', ')})`);
+			userContext.addTxHistory(contractAddress!, txHash, `${callMethodData[0]}(${callMethodData.slice(1).join(', ')})`);
 		}
 
 		await this.resolveTrace(txHash!);
@@ -295,7 +337,7 @@ export class MockRuntime extends EventEmitter {
 		return createReceipt.contractAddress ?? null;
 	}
 
-	private async invoke(contractAbi: any, contractAddress: string, methodInfo: any[]) {
+	private async invoke(contractAbi: AbiItem[], contractAddress: string, methodInfo: any[]) {
 		const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
 		const [methodName, ...params] = methodInfo;
 		const { accountAddress, pk } = userContext.getAccount();

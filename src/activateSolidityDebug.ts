@@ -4,7 +4,9 @@ import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
 import { MockDebugSession } from './mockDebug';
 import { FileAccessor } from './mockRuntime';
-import { HistoryTreeViewDataProvider, HistoryItem } from './client/HistoryTreeView';
+import { HistoryTreeViewDataProvider, HistoryItem } from './client/historyTreeView';
+import { userContext } from './common/userContext';
+import fs from 'fs';
 
 export function activateSolidityDebug(context: vscode.ExtensionContext, factory: vscode.DebugAdapterDescriptorFactory) {
 	// register a configuration provider for 'mock' debug type
@@ -27,7 +29,7 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 			});
 		}
 		return vscode.window.showQuickPick(Object.keys(fileList), {
-			placeHolder: "Please enter the name of a solidity file in the workspace folder"
+			placeHolder: "Please enter a solidity file"
 		});
 	}));
 
@@ -38,7 +40,22 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 		}));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugContract',
 		async (viewItem: HistoryItem) => {
-			vscode.window.showInformationMessage('debugContract:' + viewItem.data);
+			const contractAddress = viewItem.data;
+			const contractHistory = userContext.contractHistory[contractAddress];
+			const fileStat = await fs.promises.stat(contractHistory.filePath);
+			if (!fileStat || !fileStat.isFile()) {
+				vscode.window.showErrorMessage(`Contract source file not exist: ${contractHistory.filePath}`);
+				return;
+			}
+			vscode.debug.startDebugging(undefined, {
+				"type": "solidity",
+				"request": "launch",
+				"name": "Debug Contract",
+				"solidity": {
+					contractAddress
+				},
+				"program": contractHistory.filePath
+			});
 		}));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyTxHash',
 		async (viewItem: HistoryItem) => {
@@ -47,7 +64,23 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 		}));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugTransaction',
 		async (viewItem: HistoryItem) => {
-			console.log('debugTxHistory' + viewItem);
+			const contractViewItem = viewItem.parent!;
+			const programFile = userContext.contractHistory[contractViewItem.data].filePath;
+			const fileStat = await fs.promises.stat(programFile);
+			if (!fileStat || !fileStat.isFile()) {
+				vscode.window.showErrorMessage(`Contract source file not exist: ${programFile}`);
+				return;
+			}
+			vscode.debug.startDebugging(undefined, {
+				"type": "solidity",
+				"request": "launch",
+				"name": "Debug Transaction",
+				"solidity": {
+					contractAddress: contractViewItem.data,
+					transactionHash: viewItem.data
+				},
+				"program": programFile
+			});
 		}));
 
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('solidity', factory));

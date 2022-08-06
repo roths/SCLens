@@ -112,7 +112,7 @@ export class MockDebugSession extends LoggingDebugSession {
 		this._runtime.on('output', (type, text, filePath, line, column) => {
 
 			let category: string;
-			switch(type) {
+			switch (type) {
 				case 'prio': category = 'important'; break;
 				case 'out': category = 'stdout'; break;
 				case 'err': category = 'stderr'; break;
@@ -165,7 +165,7 @@ export class MockDebugSession extends LoggingDebugSession {
 
 		// make VS Code support completion in REPL
 		response.body.supportsCompletionsRequest = true;
-		response.body.completionTriggerCharacters = [ ".", "[" ];
+		response.body.completionTriggerCharacters = [".", "["];
 
 		// make VS Code send cancel request
 		response.body.supportsCancelRequest = true;
@@ -254,7 +254,7 @@ export class MockDebugSession extends LoggingDebugSession {
 		await this._configurationDone.wait(1000);
 
 		// start the program in the runtime
-		await this._runtime.start(args.program, !!args.stopOnEntry, !args.noDebug);
+		await this._runtime.start(args.program, !!args.stopOnEntry, !args.noDebug, (args as any)['solidity']);
 
 		if (args.compileError) {
 			// simulate a compile/build error in "launch" request:
@@ -483,8 +483,8 @@ export class MockDebugSession extends LoggingDebugSession {
 		const rv = container === 'locals'
 			? this._runtime.getLocalVariable(args.name)
 			: container instanceof RuntimeVariable && container.value instanceof Array
-			? container.value.find(v => v.name === args.name)
-			: undefined;
+				? container.value.find(v => v.name === args.name)
+				: undefined;
 
 		if (rv) {
 			rv.value = this.convertToRuntime(args.value);
@@ -506,7 +506,7 @@ export class MockDebugSession extends LoggingDebugSession {
 	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments): void {
 		this._runtime.continue(true);
 		this.sendResponse(response);
- 	}
+	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
 		this._runtime.step(args.granularity === 'instruction', false);
@@ -551,7 +551,7 @@ export class MockDebugSession extends LoggingDebugSession {
 				if (matches && matches.length === 2) {
 					const mbp = await this._runtime.setBreakPoint(this._runtime.sourceFile, this.convertClientLineToDebugger(parseInt(matches[1])));
 					const bp = new Breakpoint(mbp.verified, this.convertDebuggerLineToClient(mbp.line), undefined, this.createSource(this._runtime.sourceFile)) as DebugProtocol.Breakpoint;
-					bp.id= mbp.id;
+					bp.id = mbp.id;
 					this.sendEvent(new BreakpointEvent('new', bp));
 					reply = `breakpoint created`;
 				} else {
@@ -560,7 +560,7 @@ export class MockDebugSession extends LoggingDebugSession {
 						const mbp = this._runtime.clearBreakPoint(this._runtime.sourceFile, this.convertClientLineToDebugger(parseInt(matches[1])));
 						if (mbp) {
 							const bp = new Breakpoint(false) as DebugProtocol.Breakpoint;
-							bp.id= mbp.id;
+							bp.id = mbp.id;
 							this.sendEvent(new BreakpointEvent('removed', bp));
 							reply = `breakpoint deleted`;
 						}
@@ -576,7 +576,7 @@ export class MockDebugSession extends LoggingDebugSession {
 						}
 					}
 				}
-				// fall through
+			// fall through
 
 			default:
 				if (args.expression.startsWith('$')) {
@@ -665,18 +665,18 @@ export class MockDebugSession extends LoggingDebugSession {
 	protected dataBreakpointInfoRequest(response: DebugProtocol.DataBreakpointInfoResponse, args: DebugProtocol.DataBreakpointInfoArguments): void {
 
 		response.body = {
-            dataId: null,
-            description: "cannot break on data access",
-            accessTypes: undefined,
-            canPersist: false
-        };
+			dataId: null,
+			description: "cannot break on data access",
+			accessTypes: undefined,
+			canPersist: false
+		};
 
 		if (args.variablesReference && args.name) {
 			const v = this._variableHandles.get(args.variablesReference);
 			if (v === 'globals') {
 				response.body.dataId = args.name;
 				response.body.description = args.name;
-				response.body.accessTypes = [ "write" ];
+				response.body.accessTypes = ["write"];
 				response.body.canPersist = true;
 			} else {
 				response.body.dataId = args.name;
@@ -747,7 +747,7 @@ export class MockDebugSession extends LoggingDebugSession {
 			this._cancellationTokens.set(args.requestId, true);
 		}
 		if (args.progressId) {
-			this._cancelledProgressId= args.progressId;
+			this._cancelledProgressId = args.progressId;
 		}
 	}
 
@@ -758,15 +758,15 @@ export class MockDebugSession extends LoggingDebugSession {
 		const count = args.instructionCount;
 
 		const isHex = args.memoryReference.startsWith('0x');
-		const pad = isHex ? args.memoryReference.length-2 : args.memoryReference.length;
+		const pad = isHex ? args.memoryReference.length - 2 : args.memoryReference.length;
 
 		const loc = this.createSource(this._runtime.sourceFile);
 
 		let lastLine = -1;
 
-		const instructions = this._runtime.disassemble(baseAddress+offset, count).map(instruction => {
+		const instructions = this._runtime.disassemble(baseAddress + offset, count).map(instruction => {
 			const address = instruction.address.toString(isHex ? 16 : 10).padStart(pad, '0');
-			const instr : DebugProtocol.DisassembledInstruction = {
+			const instr: DebugProtocol.DisassembledInstruction = {
 				address: isHex ? `0x${address}` : `${address}`,
 				instruction: instruction.instruction
 			};
@@ -807,9 +807,9 @@ export class MockDebugSession extends LoggingDebugSession {
 
 	protected customRequest(command: string, response: DebugProtocol.Response, args: any) {
 		if (command === 'toggleFormatting') {
-			this._valuesInHex = ! this._valuesInHex;
+			this._valuesInHex = !this._valuesInHex;
 			if (this._useInvalidatedEvent) {
-				this.sendEvent(new InvalidatedEvent( ['variables'] ));
+				this.sendEvent(new InvalidatedEvent(['variables']));
 			}
 			this.sendResponse(response);
 		} else {
@@ -821,7 +821,7 @@ export class MockDebugSession extends LoggingDebugSession {
 
 	private convertToRuntime(value: string): IRuntimeVariableType {
 
-		value= value.trim();
+		value = value.trim();
 
 		if (value === 'true') {
 			return true;
@@ -830,7 +830,7 @@ export class MockDebugSession extends LoggingDebugSession {
 			return false;
 		}
 		if (value[0] === '\'' || value[0] === '"') {
-			return value.substr(1, value.length-2);
+			return value.substr(1, value.length - 2);
 		}
 		const n = parseFloat(value);
 		if (!isNaN(n)) {
@@ -853,7 +853,7 @@ export class MockDebugSession extends LoggingDebugSession {
 			// a "lazy" variable needs an additional click to retrieve its value
 
 			dapVariable.value = 'lazy var';		// placeholder value
-			v.reference ??= this._variableHandles.create(new RuntimeVariable('', [ new RuntimeVariable('', v.value) ]));
+			v.reference ??= this._variableHandles.create(new RuntimeVariable('', [new RuntimeVariable('', v.value)]));
 			dapVariable.variablesReference = v.reference;
 			dapVariable.presentationHint = { lazy: true };
 		} else {

@@ -33,10 +33,14 @@ export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<Hist
         for (const address in contractHistory) {
             const cache = contractHistory[address];
             const children: HistoryItem[] = [];
-            cache.txHistory.forEach(item => children.push(new HistoryItem(`${item.desc} with hash ${item.txHash}`, item.txHash, "transaction", [])));
-            this.data.push(new HistoryItem(`${cache.contractName} at ${address}`, address, "contract", children));
+            cache.txHistory.forEach(item => children.push(new HistoryItem(`${item.desc} with hash ${this.formatHash(item.txHash)}`, item.txHash, "transaction", [])));
+            this.data.push(new HistoryItem(`${cache.contractName} at ${this.formatHash(address)}`, address, "contract", children));
         }
         this._onDidChangeTreeData.fire(null);
+    }
+
+    private formatHash(hash: string) {
+        return hash.slice(0, 8) + '...';
     }
 }
 
@@ -56,7 +60,7 @@ export class HistoryItem extends vscode.TreeItem {
             // set parent
             this.children.forEach((value) => value.parent = this);
         }
-        this.contextValue = type
+        this.contextValue = type;
         if (this.contextValue === 'contract') {
             // this.iconPath = iconPath
         }
