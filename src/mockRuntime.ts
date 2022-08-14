@@ -12,7 +12,6 @@ import { init } from '@remix-project/remix-debug';
 import { TraceManager } from './trace/traceManager';
 import { CodeManager, SourceLocation } from './code/codeManager';
 import { userContext } from './common/userContext';
-import { AbiItem } from 'web3-utils';
 import { multiStepInput } from './client/multiStepInput';
 import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from './solidity-decoder';
 import { util } from '@remix-project/remix-lib';
@@ -20,6 +19,7 @@ import { Decorator } from './client/highlightUtil';
 import { StorageViewer } from './storage/storageViewer';
 import { Transaction } from 'web3-core';
 import { StorageResolver } from './storage/storageResolver';
+import { uiFlow } from './common/uiFlow';
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
 	writeFile(path: string, contents: Uint8Array): Promise<void>;
@@ -196,7 +196,7 @@ export class MockRuntime extends EventEmitter {
 		this.vmTraceIndex = 0;
 
 		this.sourceFile = contractPath;
-		
+
 		// update selectedCompilerVersion
 		this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
 		// diagnostic, light and fast
@@ -204,6 +204,7 @@ export class MockRuntime extends EventEmitter {
 		console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
 		if (this.compilationResult.errors) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
+			this.sendEvent('end');
 			return;
 		}
 		// compile
@@ -211,6 +212,7 @@ export class MockRuntime extends EventEmitter {
 		this.compilationResult = await this.solc.compile(contractPath);
 		if (this.compilationResult.errors) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
+			this.sendEvent('end');
 			return;
 		}
 		// depoly
@@ -235,9 +237,10 @@ export class MockRuntime extends EventEmitter {
 				}
 				if (!contractAddress) {
 					console.info(`depoly ${itemContractName} contract in blockchain`);
-					contractAddress = await this.deploy(itemCompiledContract);
+					contractAddress = await uiFlow.deploy(this.web3, itemCompiledContract);
 					if (!contractAddress) {
 						vscode.window.showErrorMessage(`Fail to deploy contract: ${itemContractName} in ${contractPath}`);
+						this.sendEvent('end');
 						return;
 					} else {
 						userContext.addContractHisory(contractPath, itemContractName, deployBytecode, contractAddress);
@@ -285,9 +288,10 @@ export class MockRuntime extends EventEmitter {
 
 			// invoke
 			console.info("invoke contract method", callMethodData);
-			txHash = await this.invoke(contractAbi, contractAddress!, callMethodData);
+			txHash = await uiFlow.invoke(this.web3, contractAbi, contractAddress!, callMethodData);
 			if (!txHash) {
 				vscode.window.showErrorMessage(`Fail to send transaction`);
+				this.sendEvent('end');
 				return;
 			}
 			// store cache
@@ -316,68 +320,6 @@ export class MockRuntime extends EventEmitter {
 
 	public async end() {
 		this.decorator.clear();
-	}
-
-	private async deploy(compiledContract: CompiledContract) {
-		const bytecode = compiledContract.evm.bytecode.object;
-		const abi = compiledContract.abi;
-		const contract = new this.web3.eth.Contract(abi as any);
-		const contractTx = contract.deploy({
-			data: bytecode,
-			arguments: [5],
-		});
-		const { accountAddress, pk } = userContext.getAccount();
-		const deployTransaction = await this.web3.eth.accounts.signTransaction(
-			{
-				// nonce: txCount + 3,
-				from: accountAddress,
-				data: contractTx.encodeABI(),
-				gas: 300000,
-			},
-			pk
-		);
-		const promise = this.web3.eth.sendSignedTransaction(deployTransaction.rawTransaction!);
-		promise.on('transactionHash', function (hash) {
-			console.log('transactionHash');
-			console.log(hash);
-		}).on('sent', function (sent) {
-			console.log('sent');
-			console.log(sent);
-		}).on('error', console.error);
-
-		const createReceipt = await promise;
-		console.log('Contract createReceipt:', createReceipt);
-		return createReceipt.contractAddress ?? null;
-	}
-
-	private async invoke(contractAbi: AbiItem[], contractAddress: string, methodInfo: any[]) {
-		const contract = new this.web3.eth.Contract(contractAbi, contractAddress);
-		const [methodName, ...params] = methodInfo;
-		const { accountAddress, pk } = userContext.getAccount();
-		console.log(
-			`Calling contract function '${methodName}' in address ${contractAddress} with params:${params.join(',')}`
-		);
-		const encoded = contract.methods[methodName](...params).encodeABI();
-		const tx = await this.web3.eth.accounts.signTransaction(
-			{
-				from: accountAddress,
-				to: contractAddress,
-				data: encoded,
-				gas: '3000000',
-			},
-			pk
-		);
-		const promise = this.web3.eth.sendSignedTransaction(tx.rawTransaction!);
-		promise.on('transactionHash', function (hash) {
-			console.log('transactionHash');
-			console.log(hash);
-		}).on('sent', function (sent) {
-			console.log('sent');
-			console.log(sent);
-		}).on('error', console.error);
-		const createReceipt = await promise;
-		console.log('invoke successfull with createReceipt:', createReceipt);
-		return createReceipt.transactionHash;
 	}
 
 	/**
@@ -641,7 +583,6 @@ export class MockRuntime extends EventEmitter {
 				|| traceLog.op.startsWith('PUSH')
 				|| traceLog.op.startsWith('JUMP')
 				|| traceLog.op.startsWith('CALLDATASIZE')) {
-				console.log(traceLog);
 				continue;
 			}
 			const oldLocation = this.curLocation;

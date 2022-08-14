@@ -161,62 +161,103 @@
 				"command": "extension.solidity-debug.copyContractAddress",
 				"title": "Copy Contract Address",
 				"shortTitle": "Copy",
-				"enablement": "view == deployHistory && viewItem == contract",
+				"enablement": "view == sc-deploy-history && viewItem == contract",
 				"icon": "asset/copy.svg",
-				"when": "view == deployHistory && viewItem == contract"
+				"when": "view == sc-deploy-history && viewItem == contract"
 			},
       {
 				"command": "extension.solidity-debug.debugContract",
 				"title": "Debug Contract",
 				"shortTitle": "Debug",
-				"enablement": "view == deployHistory && viewItem == contract",
+				"enablement": "view == sc-deploy-history && viewItem == contract",
 				"icon": "asset/debug.svg",
-				"when": "view == deployHistory && viewItem == contract"
+				"when": "view == sc-deploy-history && viewItem == contract"
 			},
       {
 				"command": "extension.solidity-debug.copyTxHash",
 				"title": "Copy Transaction Hash",
 				"shortTitle": "Copy",
-				"enablement": "view == deployHistory && viewItem == transaction",
+				"enablement": "view == sc-deploy-history && viewItem == transaction",
 				"icon": "asset/copy.svg",
-				"when": "view == deployHistory && viewItem == transaction"
+				"when": "view == sc-deploy-history && viewItem == transaction"
 			},
       {
 				"command": "extension.solidity-debug.debugTransaction",
 				"title": "Debug Transaction",
 				"shortTitle": "Debug",
-				"enablement": "view == deployHistory && viewItem == transaction",
+				"enablement": "view == sc-deploy-history && viewItem == transaction",
 				"icon": "asset/debug.svg",
-				"when": "view == deployHistory && viewItem == transaction"
-			}
+				"when": "view == sc-deploy-history && viewItem == transaction"
+			},
+      {
+        "command": "extension.solidity-debug.settings",
+				"title": "SCLens Settings",
+				"shortTitle": "Settings",
+				"enablement": "view == sc-settings",
+				"icon": "asset/settings.svg",
+        "when": "view == sc-settings"
+      },
+      {
+        "command": "extension.solidity-debug.settings.addAccount",
+				"title": "Add Account Address",
+				"shortTitle": "Account Address",
+				"enablement": "view == sc-settings && viewItem == account",
+				"icon": "asset/add.svg",
+        "when": "view == sc-settings"
+      }
     ],
     "menus": {
       "view/item/context": [
         {
 					"command": "extension.solidity-debug.copyContractAddress",
-					"when": "view == deployHistory && viewItem == contract",
+					"when": "view == sc-deploy-history && viewItem == contract",
 					"group": "inline@2"
 				},
         {
 					"command": "extension.solidity-debug.debugContract",
-					"when": "view == deployHistory && viewItem == contract",
+					"when": "view == sc-deploy-history && viewItem == contract",
 					"group": "inline@1"
 				},
         {
 					"command": "extension.solidity-debug.copyTxHash",
-					"when": "view == deployHistory && viewItem == transaction",
+					"when": "view == sc-deploy-history && viewItem == transaction",
 					"group": "inline@2"
 				},
         {
 					"command": "extension.solidity-debug.debugTransaction",
-					"when": "view == deployHistory && viewItem == transaction",
+					"when": "view == sc-deploy-history && viewItem == transaction",
+					"group": "inline@1"
+				},
+        {
+					"command": "extension.solidity-debug.settings",
+					"when": "view == sc-settings",
+					"group": "inline@2"
+				},
+        {
+					"command": "extension.solidity-debug.settings.addAccount",
+					"when": "view == sc-settings && viewItem == account",
 					"group": "inline@1"
 				}
       ]
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sc-act-bar",
+          "title": "SCLens",
+          "icon": "asset/eth.svg"
+        }
+      ]
+    },
     "views": {
+      "sc-act-bar": [
+        {
+          "id": "sc-settings",
+          "name": "Settings"
+        }
+      ],
       "debug": [{
-        "id": "deployHistory",
+        "id": "sc-deploy-history",
         "name": "Contract Deploy History",
         "when": "workspaceHasSolidity",
         "icon": "asset/smart_contract.svg",

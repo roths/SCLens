@@ -1,10 +1,11 @@
 
 import * as vscode from 'vscode';
 import { ContractHistory, userContext } from '../common/userContext';
+import * as fs from 'fs';
 
 export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<HistoryItem> {
     // vscode extension contributes.views id
-    static viewId = "deployHistory";
+    static viewId = "sc-deploy-history";
 
     private _onDidChangeTreeData: vscode.EventEmitter<HistoryItem | null> = new vscode.EventEmitter<HistoryItem | null>();
 
@@ -13,8 +14,59 @@ export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<Hist
 
     private data: HistoryItem[] = [];
 
-    constructor() {
+    constructor(context: vscode.ExtensionContext) {
         userContext.attachHistoryTreeView(this);
+
+        // register item commands
+        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyContractAddress',
+            async (viewItem: HistoryItem) => {
+                vscode.env.clipboard.writeText(viewItem.data);
+                vscode.window.showInformationMessage('Contract Address Copied:' + viewItem.data);
+            }));
+        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugContract',
+            async (viewItem: HistoryItem) => {
+                const contractAddress = viewItem.data;
+                const contractHistory = userContext.contractHistory[contractAddress];
+                const fileStat = await fs.promises.stat(contractHistory.filePath);
+                if (!fileStat || !fileStat.isFile()) {
+                    vscode.window.showErrorMessage(`Contract source file not exist: ${contractHistory.filePath}`);
+                    return;
+                }
+                vscode.debug.startDebugging(undefined, {
+                    "type": "solidity",
+                    "request": "launch",
+                    "name": "Debug Contract",
+                    "solidity": {
+                        contractAddress
+                    },
+                    "program": contractHistory.filePath
+                });
+            }));
+        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyTxHash',
+            async (viewItem: HistoryItem) => {
+                vscode.env.clipboard.writeText(viewItem.data);
+                vscode.window.showInformationMessage('Transaction Hash Copied:' + viewItem.data);
+            }));
+        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugTransaction',
+            async (viewItem: HistoryItem) => {
+                const contractViewItem = viewItem.parent!;
+                const programFile = userContext.contractHistory[contractViewItem.data].filePath;
+                const fileStat = await fs.promises.stat(programFile);
+                if (!fileStat || !fileStat.isFile()) {
+                    vscode.window.showErrorMessage(`Contract source file not exist: ${programFile}`);
+                    return;
+                }
+                vscode.debug.startDebugging(undefined, {
+                    "type": "solidity",
+                    "request": "launch",
+                    "name": "Debug Transaction",
+                    "solidity": {
+                        contractAddress: contractViewItem.data,
+                        transactionHash: viewItem.data
+                    },
+                    "program": programFile
+                });
+            }));
     }
 
     getTreeItem(element: HistoryItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -44,7 +96,7 @@ export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<Hist
     }
 }
 
-export class HistoryItem extends vscode.TreeItem {
+class HistoryItem extends vscode.TreeItem {
     parent: HistoryItem | null = null;
     children: HistoryItem[];
     data: string;
