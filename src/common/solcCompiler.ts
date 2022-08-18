@@ -175,7 +175,7 @@ export class SolcCompiler {
     private async prepareCompiler(selectedVersion: string): Promise<boolean> {
         const solcVersionMap = await solcHttpClient.fetchVersions();
         const selectedVersionFile = solcVersionMap[selectedVersion];
-        const destFile = path.resolve(path.join(this.cachePath, "solcCache", selectedVersionFile));
+        const destFile = path.resolve(path.join(this.cachePath, "cache", "solc", selectedVersionFile));
         await fs.promises.mkdir(path.dirname(destFile), { recursive: true });
 
         // download js file

@@ -25,7 +25,7 @@ export class ImportResolver {
 
     constructor(cachePath: string) {
         this.previouslyHandled = {};
-        this.depsCachePath = path.join(cachePath, ".deps");
+        this.depsCachePath = path.join(cachePath, "cache", "deps");
     }
 
     public async resolve(importPath: string): Promise<Imported | undefined> {
