@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { solcHttpClient } from '../common/solcCompiler';
 import { userContext } from '../common/userContext';
 
-export class AccountTreeViewDataProvider implements vscode.TreeDataProvider<SettingsItem> {
+export class SettingsTreeViewDataProvider implements vscode.TreeDataProvider<SettingsItem> {
     // vscode extension contributes.views id
-    static viewId = "sc-settings";
+    public static readonly viewId = "sc-settings";
 
     private _onDidChangeTreeData: vscode.EventEmitter<SettingsItem | null> = new vscode.EventEmitter<SettingsItem | null>();
 

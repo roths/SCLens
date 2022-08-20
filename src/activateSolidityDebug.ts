@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { WorkspaceFolder, DebugConfiguration, ProviderResult, CancellationToken } from 'vscode';
 import { MockDebugSession } from './mockDebug';
 import { FileAccessor } from './mockRuntime';
-import { HistoryTreeViewDataProvider } from './client/historyTreeView';
-import { AccountTreeViewDataProvider } from './client/accountTreeView';
-import { SettingsViewProvider } from './client/settingsView';
+import { HistoryTreeViewDataProvider as HistoryTreeViewProvider } from './client/historyTreeView';
+import { SettingsTreeViewDataProvider as SettingsTreeViewProvider } from './client/settingsTreeView';
+import { SettingsWebViewProvider } from './client/settingsWebView';
 
 export function activateSolidityDebug(context: vscode.ExtensionContext, factory: vscode.DebugAdapterDescriptorFactory) {
 	// register a configuration provider for 'mock' debug type
@@ -35,10 +35,10 @@ export function activateSolidityDebug(context: vscode.ExtensionContext, factory:
 
 	context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('solidity', factory));
 
-	context.subscriptions.push(vscode.window.registerTreeDataProvider(HistoryTreeViewDataProvider.viewId, new HistoryTreeViewDataProvider(context)));
-	// context.subscriptions.push(vscode.window.registerTreeDataProvider(AccountTreeViewDataProvider.viewId, new AccountTreeViewDataProvider(context)));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider(HistoryTreeViewProvider.viewId, new HistoryTreeViewProvider(context)));
 
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider(SettingsViewProvider.viewType, new SettingsViewProvider(context)));
+	context.subscriptions.push(vscode.window.registerTreeDataProvider(SettingsTreeViewProvider.viewId, new SettingsTreeViewProvider(context)));
+	// context.subscriptions.push(vscode.window.registerWebviewViewProvider(SettingsWebViewProvider.viewId, new SettingsWebViewProvider(context)));
 }
 
 class SolidityConfigurationProvider implements vscode.DebugConfigurationProvider {

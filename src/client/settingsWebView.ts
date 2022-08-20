@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 
-export class SettingsViewProvider implements vscode.WebviewViewProvider {
+export class SettingsWebViewProvider implements vscode.WebviewViewProvider {
 
-	public static readonly viewType = 'sc-settings';
-	private readonly _extensionUri: vscode.Uri;
+	public static readonly viewId = 'sc-settings';
+	private readonly extensionUri: vscode.Uri;
 
-	private _view?: vscode.WebviewView;
+	private view?: vscode.WebviewView;
 
 	constructor(context: vscode.ExtensionContext) {
-		this._extensionUri = context.extensionUri;
+		this.extensionUri = context.extensionUri;
 	}
 
 	public resolveWebviewView(
@@ -16,14 +16,14 @@ export class SettingsViewProvider implements vscode.WebviewViewProvider {
 		context: vscode.WebviewViewResolveContext,
 		_token: vscode.CancellationToken,
 	) {
-		this._view = webviewView;
+		this.view = webviewView;
 
 		webviewView.webview.options = {
 			// Allow scripts in the webview
 			enableScripts: true,
 
 			localResourceRoots: [
-				this._extensionUri
+				this.extensionUri
 			]
 		};
 
@@ -41,22 +41,22 @@ export class SettingsViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	public addColor() {
-		if (this._view) {
-			this._view.show?.(true); // `show` is not implemented in 1.49 but is for 1.50 insiders
-			this._view.webview.postMessage({ type: 'addColor' });
+		if (this.view) {
+			this.view.show?.(true); // `show` is not implemented in 1.49 but is for 1.50 insiders
+			this.view.webview.postMessage({ type: 'addColor' });
 		}
 	}
 
 	public clearColors() {
-		if (this._view) {
-			this._view.webview.postMessage({ type: 'clearColors' });
+		if (this.view) {
+			this.view.webview.postMessage({ type: 'clearColors' });
 		}
 	}
 
 	private getHtmlForWebview(webview: vscode.Webview) {
 		// The CSS file from the React build output
 		const stylesUri = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._extensionUri, ...[
+			vscode.Uri.joinPath(this.extensionUri, ...[
 				"webview-ui",
 				"build",
 				"static",
@@ -65,7 +65,7 @@ export class SettingsViewProvider implements vscode.WebviewViewProvider {
 			]));
 		// The JS file from the React build output
 		const scriptUri = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._extensionUri, ...[
+			vscode.Uri.joinPath(this.extensionUri, ...[
 				"webview-ui",
 				"build",
 				"static",

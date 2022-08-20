@@ -1,4 +1,4 @@
-import { AccountTreeViewDataProvider } from "../client/accountTreeView";
+import { SettingsTreeViewDataProvider } from "../client/settingsTreeView";
 import { HistoryTreeViewDataProvider } from "../client/historyTreeView";
 
 class UserContext {
@@ -16,7 +16,7 @@ class UserContext {
     // test, contractName，address，txhash
 
     private historyTreeViewProvider: HistoryTreeViewDataProvider | null = null;
-    private accountTreeViewProvider: AccountTreeViewDataProvider | null = null;
+    private accountTreeViewProvider: SettingsTreeViewDataProvider | null = null;
 
     constructor() {
         this.injectTestData();
@@ -74,7 +74,7 @@ class UserContext {
         this.injectTestData();
     }
 
-    attachAccountTreeView(provider: AccountTreeViewDataProvider) {
+    attachAccountTreeView(provider: SettingsTreeViewDataProvider) {
         this.accountTreeViewProvider = provider;
         // test
         this.injectTestData();

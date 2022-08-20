@@ -252,7 +252,6 @@
     "views": {
       "sc-act-bar": [
         {
-          "type": "webview",
           "id": "sc-settings",
           "name": "Settings"
         }
