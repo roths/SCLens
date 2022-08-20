@@ -1,6 +1,6 @@
 'use strict';
 import { helpers } from '@remix-project/remix-lib';
-import { StructLog } from '../common/type';
+import { StructLog } from '../../common/type';
 const { ui } = helpers;
 
 // vmTraceIndex has to point to a CALL, CODECALL, ...

@@ -1,6 +1,6 @@
 'use strict'
 import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util'
-import { StorageViewer } from './storage/storageViewer';
+import { StorageViewer } from './solidity/storage/storageViewer';
 
 export function decodeIntFromHex (value, byteLength, signed) {
   let bigNumber = new BN(value, 16)

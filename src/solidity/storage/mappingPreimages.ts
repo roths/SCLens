@@ -1,7 +1,7 @@
 import Web3 from 'web3';
 import { Storagelocation as StorageLocation } from '../solidity-decoder/decodeInfo';
 import { sub } from '../solidity-decoder/types/util';
-import { StorageMap } from '../common/type';
+import { StorageMap } from '../../common/type';
 
 /**
   * extract the mappings location from the storage

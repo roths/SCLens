@@ -9,16 +9,16 @@ import * as vscode from 'vscode';
 import { CompilationResult, CompiledContract } from './common/type';
 import Web3 from 'web3';
 import { init } from '@remix-project/remix-debug';
-import { TraceManager } from './trace/traceManager';
-import { CodeManager, SourceLocation } from './code/codeManager';
+import { TraceManager } from './solidity/trace/traceManager';
+import { CodeManager, SourceLocation } from './solidity/code/codeManager';
 import { userContext } from './common/userContext';
 import { multiStepInput } from './client/multiStepInput';
-import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from './solidity-decoder';
+import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from './solidity/solidity-decoder';
 import { util } from '@remix-project/remix-lib';
 import { Decorator } from './client/highlightUtil';
-import { StorageViewer } from './storage/storageViewer';
+import { StorageViewer } from './solidity/storage/storageViewer';
 import { Transaction } from 'web3-core';
-import { StorageResolver } from './storage/storageResolver';
+import { StorageResolver } from './solidity/storage/storageResolver';
 import { uiFlow } from './common/uiFlow';
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -253,7 +253,9 @@ export class MockRuntime extends EventEmitter {
 		if (contractHistory) {
 			const solcDeployBytecode = this.compilationResult.contracts![contractHistory.filePath][contractHistory.contractName].evm.deployedBytecode.object;
 			if (contractHistory.deployBytecode !== solcDeployBytecode) {
-				vscode.window.showInformationMessage(`Contract source not match with evm bytecode!`);
+				vscode.window.showErrorMessage(`Contract source not match with evm bytecode!`);
+				this.sendEvent('end');
+				return;
 			}
 		}
 		// TODO：register completion items
@@ -579,12 +581,12 @@ export class MockRuntime extends EventEmitter {
 			}
 			const traceLog = this.traceManager.getTraceLog(this.vmTraceIndex);
 			// filter some op
-			if (traceLog.op.startsWith('DUP')
-				|| traceLog.op.startsWith('PUSH')
-				|| traceLog.op.startsWith('JUMP')
-				|| traceLog.op.startsWith('CALLDATASIZE')) {
-				continue;
-			}
+			// if (traceLog.op.startsWith('DUP')
+			// 	|| traceLog.op.startsWith('PUSH')
+			// 	|| traceLog.op.startsWith('JUMP')
+			// 	|| traceLog.op.startsWith('CALLDATASIZE')) {
+			// 	continue;
+			// }
 			const oldLocation = this.curLocation;
 			this.curLocation = sourceLocation;
 			if (this.curLocation.file !== oldLocation.file

@@ -1,6 +1,6 @@
 'use strict';
 import { AstWalker } from '@remix-project/remix-astwalker';
-import { ComplitionSources, AstNode } from '../common/type';
+import { ComplitionSources, AstNode } from '../../common/type';
 
 export interface ContractDefinitions {
   contractsById: { [key: string]: AstNode; },

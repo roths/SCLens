@@ -3,7 +3,7 @@ import { Transaction } from 'web3-core';
 import Web3 from 'web3';
 import { isContractCreation } from '../trace/traceHelper';
 import { decodeMappingsKeys } from './mappingPreimages';
-import { Storage, StorageMap, StorageRangeResult } from '../common/type';
+import { Storage, StorageMap, StorageRangeResult } from '../../common/type';
 import { Storagelocation } from '../solidity-decoder/decodeInfo';
 
 /**

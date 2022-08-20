@@ -1,6 +1,6 @@
 'use strict';
 import { util } from '@remix-project/remix-lib';
-import { StructLog } from '../common/type';
+import { StructLog } from '../../common/type';
 
 export interface Call {
   op: string,

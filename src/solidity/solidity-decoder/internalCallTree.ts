@@ -2,15 +2,15 @@
 import { AstWalker } from '@remix-project/remix-astwalker';
 import { util } from '@remix-project/remix-lib';
 import { TraceManager } from '../trace/traceManager';
-import { AstNode, CompilationResult, StructLog, VariableDeclarationAstNode, YulBlockAstNode, YulVariableDeclarationAstNode } from '../common/type';
+import { AstNode, CompilationResult, StructLog, VariableDeclarationAstNode, YulBlockAstNode, YulVariableDeclarationAstNode } from '../../common/type';
 // import { SourceLocationTracker } from '../source/sourceLocationTracker'
 // import { EventManager } from '../eventManager'
 import { parseType, SolidityType } from './decodeInfo';
 import { ContractObject, SolidityProxy } from './solidityProxy';
 import { isContractCreation, isCallInstruction, isCreateInstruction, isJumpDestInstruction } from '../trace/traceHelper';
-import { extractLocationFromAstVariable } from '../util';
+import { extractLocationFromAstVariable } from '../../util';
 import { CodeManager, SourceLocation } from '../code/codeManager';
-import { GeneratedSource } from '../common/type';
+import { GeneratedSource } from '../../common/type';
 import { StatesDefinitions } from './astHelper';
 import { AbiItem } from 'web3-utils';
 
