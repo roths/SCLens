@@ -263,6 +263,12 @@
           "when": "workspaceHasSolidity",
           "icon": "asset/smart_contract.svg",
           "contextualTitle": "Contract Deploy History Explorer"
+        },
+        {
+          "id": "scLens.instructionTree",
+          "name": "Instruction List",
+          "when": "workspaceHasSolidity",
+          "contextualTitle": "Solidity EVM Instruction Explorer"
         }
       ]
     }

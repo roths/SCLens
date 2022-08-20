@@ -1,17 +1,15 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { solcHttpClient } from '../common/solcCompiler';
-import { userContext } from '../common/userContext';
+import { solcHttpClient } from '../../common/solcCompiler';
+import { userContext } from '../../common/userContext';
 
-export class SettingsTreeViewDataProvider implements vscode.TreeDataProvider<SettingsItem> {
+export class SettingsTreeViewProvider implements vscode.TreeDataProvider<SettingsItem> {
     // vscode extension contributes.views id
     public static readonly viewId = "sc-settings";
 
     private _onDidChangeTreeData: vscode.EventEmitter<SettingsItem | null> = new vscode.EventEmitter<SettingsItem | null>();
-
-    readonly onDidChangeTreeData: vscode.Event<SettingsItem | null> = this
-        ._onDidChangeTreeData.event;
+    public readonly onDidChangeTreeData: vscode.Event<SettingsItem | null> = this._onDidChangeTreeData.event;
 
     private data: SettingsItem[] = [];
 
@@ -27,18 +25,18 @@ export class SettingsTreeViewDataProvider implements vscode.TreeDataProvider<Set
             }));
     }
 
-    getTreeItem(element: SettingsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    public getTreeItem(element: SettingsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element;
     }
 
-    getChildren(element?: SettingsItem | undefined): vscode.ProviderResult<SettingsItem[]> {
+    public getChildren(element?: SettingsItem | undefined): vscode.ProviderResult<SettingsItem[]> {
         if (element === undefined) {
             return this.data;
         }
         return [];
     }
 
-    refresh(): void {
+    public refresh(): void {
         this.data = [];
         const { accountAddress, pk } = userContext.getCurAccount();
         this.data.push(new SettingsItem('[Current Account]: ' + accountAddress, accountAddress, 'account'));
@@ -76,6 +74,11 @@ export class SettingsTreeViewDataProvider implements vscode.TreeDataProvider<Set
                 break;
         }
     }
+
+    public static register(context: vscode.ExtensionContext) {
+        context.subscriptions.push(vscode.window.registerTreeDataProvider(SettingsTreeViewProvider.viewId,
+            new SettingsTreeViewProvider(context)));
+    }
 }
 
 
@@ -90,6 +93,6 @@ class SettingsItem extends vscode.TreeItem {
         this.data = data;
         this.type = type;
         this.contextValue = type;
-        this.iconPath = path.join(__filename, '..', '..', '..', 'asset', 'fieldset.svg');
+        this.iconPath = path.join(__filename, '..', '..', '..', '..', 'asset', 'fieldset.svg');
     }
 }

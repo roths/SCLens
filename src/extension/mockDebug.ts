@@ -155,13 +155,13 @@ export class MockDebugSession extends LoggingDebugSession {
 		response.body.supportsConfigurationDoneRequest = true;
 
 		// make VS Code use 'evaluate' when hovering over source
-		response.body.supportsEvaluateForHovers = true;
+		response.body.supportsEvaluateForHovers = false;
 
 		// make VS Code show a 'step back' button
 		response.body.supportsStepBack = true;
 
 		// make VS Code support data breakpoints
-		response.body.supportsDataBreakpoints = true;
+		response.body.supportsDataBreakpoints = false;
 
 		// make VS Code support completion in REPL
 		response.body.supportsCompletionsRequest = true;
@@ -174,10 +174,10 @@ export class MockDebugSession extends LoggingDebugSession {
 		response.body.supportsBreakpointLocationsRequest = true;
 
 		// make VS Code provide "Step in Target" functionality
-		response.body.supportsStepInTargetsRequest = true;
+		response.body.supportsStepInTargetsRequest = false;
 
 		// the adapter defines two exceptions filters, one with support for conditions.
-		response.body.supportsExceptionFilterOptions = true;
+		response.body.supportsExceptionFilterOptions = false;
 		response.body.exceptionBreakpointFilters = [
 			{
 				filter: 'namedException',
@@ -200,7 +200,7 @@ export class MockDebugSession extends LoggingDebugSession {
 		response.body.supportsExceptionInfoRequest = true;
 
 		// make VS Code send setVariable request
-		response.body.supportsSetVariable = true;
+		response.body.supportsSetVariable = false;
 
 		// make VS Code send setExpression request
 		response.body.supportsSetExpression = true;

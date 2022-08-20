@@ -36,7 +36,7 @@ export class CodeManager {
         this.traceManager = traceManager;
     }
 
-    async getSourceLocationByVMTraceIndex(contractAddress: string, vmTraceIndex: number, contracts: CompiledContractObj) {
+    public async getSourceLocationByVMTraceIndex(contractAddress: string, vmTraceIndex: number, contracts: CompiledContractObj) {
         const instructions = await this.getInstructions(contractAddress);
         const { sourceMap } = this.getSourceMap(contractAddress, instructions.bytecode, contracts) ?? {};
         const instructionIndex = await this.getInstructionIndex(contractAddress, vmTraceIndex);
@@ -47,7 +47,7 @@ export class CodeManager {
         }
     }
 
-    async getSourceLocationByInstructionIndex(contractAddress: string, instructionIndex: number, contracts: CompiledContractObj): Promise<SourceLocation | null> {
+    public async getSourceLocationByInstructionIndex(contractAddress: string, instructionIndex: number, contracts: CompiledContractObj): Promise<SourceLocation | null> {
         const instructions = await this.getInstructions(contractAddress);
         const { sourceMap } = this.getSourceMap(contractAddress, instructions.bytecode, contracts) ?? {};
         if (sourceMap) {
@@ -57,7 +57,7 @@ export class CodeManager {
         }
     }
 
-    async getValidSourceLocationByVMTraceIndex(contractAddress: string, vmTraceIndex: number, contracts: CompiledContractObj) {
+    public async getValidSourceLocationByVMTraceIndex(contractAddress: string, vmTraceIndex: number, contracts: CompiledContractObj) {
         // not include generatedSources
         const amountOfSources = Object.keys(contracts).length;
         let location: SourceLocation = {
@@ -79,7 +79,7 @@ export class CodeManager {
         return location;
     }
 
-    private async getInstructions(contractAddress: string): Promise<BlockChainInstruction> {
+    public async getInstructions(contractAddress: string): Promise<BlockChainInstruction> {
         if (!this.instructionsCache[contractAddress]) {
             // bytecode like 0x....
             const codeFromChain = await this.web3.eth.getCode(contractAddress);
@@ -94,7 +94,7 @@ export class CodeManager {
         return this.instructionsCache[contractAddress];
     }
 
-    private async getInstructionIndex(contractAddress: string, vmTraceIndex: number) {
+    public async getInstructionIndex(contractAddress: string, vmTraceIndex: number) {
         try {
             const pc = this.traceManager.getTraceLog(vmTraceIndex).pc;
             const blockChainInstruction = await this.getInstructions(contractAddress);

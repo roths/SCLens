@@ -1,9 +1,9 @@
 
 import * as vscode from 'vscode';
-import { ContractHistory, userContext } from '../common/userContext';
+import { ContractHistory, userContext } from '../../common/userContext';
 import * as fs from 'fs';
 
-export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<HistoryItem> {
+export class HistoryTreeViewProvider implements vscode.TreeDataProvider<HistoryItem> {
     // vscode extension contributes.views id
     static viewId = "sc-deploy-history";
 
@@ -93,6 +93,11 @@ export class HistoryTreeViewDataProvider implements vscode.TreeDataProvider<Hist
 
     private formatHash(hash: string) {
         return hash.slice(0, 8) + '...';
+    }
+
+    public static register(context: vscode.ExtensionContext) {
+        context.subscriptions.push(vscode.window.registerTreeDataProvider(HistoryTreeViewProvider.viewId,
+            new HistoryTreeViewProvider(context)));
     }
 }
 

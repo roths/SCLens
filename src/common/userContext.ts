@@ -1,25 +1,38 @@
-import { SettingsTreeViewDataProvider } from "../client/settingsTreeView";
-import { HistoryTreeViewDataProvider } from "../client/historyTreeView";
+import { SettingsTreeViewProvider } from "../extension/ui/settingsTreeView";
+import { HistoryTreeViewProvider } from "../extension/ui/historyTreeView";
+import path from "path";
+import vscode from "vscode";
+import fs from 'fs';
+import { workspaceFileAccessor } from "../extension/utils/file";
 
 class UserContext {
-    selectedCompilerVersion: string = "Auto";
-    selectedAccount: string | null = null;
+    public selectedCompilerVersion: string = "Auto";
+    public selectedAccount: string | null = null;
     // 'https://remix-goerli.ethdevops.io'
     // 'https://ropsten.infura.io/v3/4c32d98b849c4310af378437be8128e5'
     // 'http://192.168.0.155:8545'
-    network: string = "https://remix-goerli.ethdevops.io";
+    public network: string = "https://remix-goerli.ethdevops.io";
 
-    readonly contractHistory: ContractHistory = {};
-
+    private _contractHistory: ContractHistory = {};
+    public get contractHistory() {
+        return this._contractHistory;
+    }
     // address, private key
-    readonly accounts = new Map<string, string>();
-    // test, contractName，address，txhash
+    private _accounts = new Map<string, string>();
+    public get accounts() {
+        return this._accounts;
+    }
+    private historyTreeViewProvider: HistoryTreeViewProvider | null = null;
+    private settingsTreeViewProvider: SettingsTreeViewProvider | null = null;
+    private cachePath!: string;
 
-    private historyTreeViewProvider: HistoryTreeViewDataProvider | null = null;
-    private accountTreeViewProvider: SettingsTreeViewDataProvider | null = null;
+    public async activate(context: vscode.ExtensionContext) {
+        this.cachePath = context.extensionPath;
+        this.loadContextCache();
+    }
 
-    constructor() {
-        this.injectTestData();
+    public async deactivate() {
+        this.saveContextCache();
     }
 
     getCurAccount(): { accountAddress: string, pk: string; } {
@@ -32,7 +45,7 @@ class UserContext {
 
     addAccount(address: string, pk: string) {
         this.accounts.set(address, pk);
-        this.accountTreeViewProvider?.refresh();
+        this.settingsTreeViewProvider?.refresh();
     }
 
     findContractHistory(filePath: string, contractName: string, deployBytecode: string): string | null {
@@ -68,23 +81,62 @@ class UserContext {
         this.historyTreeViewProvider?.refresh(this.contractHistory);
     }
 
-    attachHistoryTreeView(provider: HistoryTreeViewDataProvider) {
+    attachHistoryTreeView(provider: HistoryTreeViewProvider) {
         this.historyTreeViewProvider = provider;
-        // test
-        this.injectTestData();
+        this.historyTreeViewProvider.refresh(this.contractHistory);
     }
 
-    attachAccountTreeView(provider: SettingsTreeViewDataProvider) {
-        this.accountTreeViewProvider = provider;
-        // test
+    attachAccountTreeView(provider: SettingsTreeViewProvider) {
+        this.settingsTreeViewProvider = provider;
+        this.settingsTreeViewProvider.refresh();
+    }
+
+    private async saveContextCache() {
+        const cacheFile = this.getCacheFile();
+        await fs.promises.mkdir(path.dirname(cacheFile), { recursive: true });
+
+
+        await workspaceFileAccessor.writeFile(cacheFile, new TextEncoder().encode(JSON.stringify({
+            selectedCompilerVersion: this.selectedCompilerVersion,
+            selectedAccount: this.selectedAccount,
+            contractHistory: this._contractHistory,
+            accounts: this._accounts,
+        })));
+    }
+
+    private async loadContextCache() {
         this.injectTestData();
+
+        const cacheFile = this.getCacheFile();
+        if (!fs.existsSync(cacheFile)) {
+            return;
+        }
+
+        const cache = JSON.parse(new TextDecoder().decode(await workspaceFileAccessor.readFile(cacheFile)));
+
+        if (cache) {
+            if (cache.selectedCompilerVersion) {
+                this.selectedCompilerVersion = cache.selectedCompilerVersion;
+            }
+            if (cache.selectedAccount) {
+                this.selectedAccount = cache.selectedAccount;
+            }
+            if (cache.contractHistory) {
+                this._contractHistory = cache.contractHistory;
+            }
+            if (cache.accounts) {
+                this._accounts = cache.accounts;
+            }
+        }
+    }
+
+    private getCacheFile() {
+        return path.join(this.cachePath, "cache", "user", "context.json");
     }
 
     private injectTestData() {
-        this.addContractHisory('/Users/luoqiaoyou/Downloads/sol/test.sol', 'Storage', '608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610050575b600080fd5b60005460405190815260200160405180910390f35b61006361005e3660046100f2565b610065565b005b60015b600a811161008f5761007b600183610121565b91508061008781610134565b915050610068565b50610099816100b4565b6100a4600b8361014d565b6100ae9190610121565b60005550565b600060015b600a81116100e0576100cc600184610121565b9250806100d881610134565b9150506100b9565b506100ec82600a610121565b92915050565b60006020828403121561010457600080fd5b5035919050565b634e487b7160e01b600052601160045260246000fd5b808201808211156100ec576100ec61010b565b6000600182016101465761014661010b565b5060010190565b818103818111156100ec576100ec61010b56fea264697066735822122031b278e124b283f039170d35d7bd502dff50f516383e0699a642e68c87e2d8c664736f6c63430008100033', '0xC97a87Af9D9d27df86DA78b605e00730Cf2CDb3d');
-        this.addTxHistory('0xC97a87Af9D9d27df86DA78b605e00730Cf2CDb3d', '0x5884fe1b70ed440199bf388e2a7bf1bffa09cc3e74095e4df644ce2716e9bb83', 'store(111)');
-        this.addContractHisory('/Users/luoqiaoyou/Downloads/sol/test.sol', 'Storage', '608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610050575b600080fd5b60005460405190815260200160405180910390f35b61006361005e3660046100f2565b610065565b005b60015b600a811161008f5761007b600183610121565b91508061008781610139565b915050610068565b50610099816100b4565b6100a4600b83610152565b6100ae9190610121565b60005550565b600060015b600a81116100e0576100cc600184610121565b9250806100d881610139565b9150506100b9565b506100ec82600a610121565b92915050565b60006020828403121561010457600080fd5b5035919050565b634e487b7160e01b600052601160045260246000fd5b600082198211156101345761013461010b565b500190565b60006001820161014b5761014b61010b565b5060010190565b6000828210156101645761016461010b565b50039056fea2646970667358221220edceccd7d3a239d2106b50e75da22efc18442697c3ff01224c12752290bda7cf64736f6c634300080f0033', '0xeC67ECe25aC64Fb6E8b1883956D4CC2f2D89365F');
-        this.addTxHistory('0xeC67ECe25aC64Fb6E8b1883956D4CC2f2D89365F', '0x1c6ec97ed7cb6c3e7a366485bf3c2e9682cd03be65c0cdd09dc011987db71177', 'store(100)');
+        this.addContractHisory('/Users/luoqiaoyou/Downloads/sol/test.sol', 'Storage', '608060405234801561001057600080fd5b50600436106100365760003560e01c80632e64cec11461003b5780636057361d14610059575b600080fd5b610043610075565b6040516100509190610139565b60405180910390f35b610073600480360381019061006e9190610185565b61007e565b005b60008054905090565b6000600190505b600a81116100af5760018261009a91906101e1565b915080806100a790610215565b915050610085565b506100b9816100d9565b600b826100c6919061025d565b6100d091906101e1565b60008190555050565b600080600190505b600a811161010b576001836100f691906101e1565b9250808061010390610215565b9150506100e1565b50600a8261011991906101e1565b9050919050565b6000819050919050565b61013381610120565b82525050565b600060208201905061014e600083018461012a565b92915050565b600080fd5b61016281610120565b811461016d57600080fd5b50565b60008135905061017f81610159565b92915050565b60006020828403121561019b5761019a610154565b5b60006101a984828501610170565b91505092915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60006101ec82610120565b91506101f783610120565b925082820190508082111561020f5761020e6101b2565b5b92915050565b600061022082610120565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8203610252576102516101b2565b5b600182019050919050565b600061026882610120565b915061027383610120565b925082820390508181111561028b5761028a6101b2565b5b9291505056fea2646970667358221220bede6d26580ced854ce567319fe70f325bcf41257ec66abaea1e864b7f413d7d64736f6c63430008100033', '0x679d5ff726A632A2cFf91Cf0851427ADb9770bfc');
+        this.addTxHistory('0x679d5ff726A632A2cFf91Cf0851427ADb9770bfc', '0x4527273fdc790723e849222eee45a806b36833ffe26451929c2beab357bc88d4', 'store(111)');
         this.addAccount('0x957605948208a014D92F8968268053a4E4E14A0D', 'f7ad2ba6fd69c9ee0ce6119a3fd563f0ce6a58901f8265faa1bed3362ac919c2');
         this.addAccount('0x03E397A7b9f24AdDb07d03176599970a942497ef', '2f4e33cb48b192c96ada5c190d760bebb1950a9bcb436c42ae4413c077cae48c');
     }

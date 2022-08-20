@@ -27,13 +27,13 @@ export class SolcCompiler {
     public async compile(contractPath: string) {
         const settings = {
             optimizer: {
-                enabled: true,
+                enabled: false, // bug: if enable, can not get corrent sourcemap 
                 runs: 200,
             },
             outputSelection: {
                 '*': {
                     '': ['ast'],
-                    '*': ['abi', 'devdoc', 'userdoc', 'storageLayout', 'metadata', 'evm.bytecode', 'evm.deployedBytecode', 'evm.methodIdentifiers', 'evm.gasEstimates'],
+                    '*': ['abi', 'metadata', 'devdoc', 'userdoc', 'storageLayout', 'evm.legacyAssembly', 'evm.bytecode', 'evm.deployedBytecode', 'evm.methodIdentifiers', 'evm.gasEstimates', 'evm.assembly']
                 },
             }
         };

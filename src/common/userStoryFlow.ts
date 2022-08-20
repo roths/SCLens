@@ -4,7 +4,7 @@ import { userContext } from "./userContext";
 import { AbiItem } from 'web3-utils';
 
 // user interaction flow
-class UIFlow {
+class UserStoryFlow {
 
     public async deploy(web3: Web3, compiledContract: CompiledContract) {
         const bytecode = compiledContract.evm.bytecode.object;
@@ -75,4 +75,4 @@ class UIFlow {
 	}
 }
 
-export const uiFlow = new UIFlow();
+export const uiFlow = new UserStoryFlow();
