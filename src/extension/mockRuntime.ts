@@ -327,7 +327,7 @@ export class MockRuntime extends EventEmitter {
 				lineOffset: this.getLineOffset((await this.fileAccessor.readFile(filePath)).toString())
 			};
 		}
-		this.continue(false);
+		this.step(false, false);
 		InstructionListViewProvider.triggerRefresh((await this.codeManager.getInstructions(contractAddress!)).instructions);
 	}
 
@@ -634,6 +634,12 @@ export class MockRuntime extends EventEmitter {
 			if (!newLocation || !this.fileInfo[newLocation.file]) {
 				continue;
 			}
+			// if source location not change, continue
+			if (newLocation.file === oldLocation.file
+				&& newLocation.start === oldLocation.start
+				&& newLocation.length === oldLocation.length) {
+				continue;
+			}
 
 			const traceLog = this.traceManager.getTraceLog(curTraceIndex);
 			// filter some op
@@ -641,13 +647,10 @@ export class MockRuntime extends EventEmitter {
 				|| traceLog.op.startsWith('PUSH')
 				|| traceLog.op.startsWith('JUMP')
 				|| traceLog.op.startsWith('CALLDATASIZE')) {
-				continue;
-			}
-			// if source location not change, continue
-			if (newLocation.file === oldLocation.file
-				&& newLocation.start === oldLocation.start
-				&& newLocation.length === oldLocation.length) {
-				continue;
+				// we need to stop before jump into other function
+				if (newLocation.jump !== 'i') {
+					continue;
+				}
 			}
 			// check if jump into other function scope
 			if (!stepIn) {
@@ -661,8 +664,9 @@ export class MockRuntime extends EventEmitter {
 					const closestFuncCallIndex = util.findLowerBound(oldIndex, this.callTree.functionCallStack);
 					if (closestFuncCallIndex + 1 < this.callTree.functionCallStack.length
 						&& curTraceIndex >= this.callTree.functionCallStack[closestFuncCallIndex]) {
-						// immediately jump to function scope end
+						// immediately jump to function scope end, and find next valid line
 						curTraceIndex = nextScopeEnd;
+						continue;
 					}
 				}
 			}
