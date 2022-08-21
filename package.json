@@ -121,7 +121,7 @@
           }
         ],
         "variables": {
-          "AskForProgramName": "extension.solidity-debug.getProgramName"
+          "AskForProgramName": "scLens.debugConfig.getProgramName"
         }
       }
     ],
@@ -158,84 +158,84 @@
     ],
     "commands": [
       {
-        "command": "extension.solidity-debug.copyContractAddress",
+        "command": "scLens.deployHistory.copyContractAddress",
         "title": "Copy Contract Address",
         "shortTitle": "Copy",
-        "enablement": "view == sc-deploy-history && viewItem == contract",
+        "enablement": "view == scLens.deployHistoryTree && viewItem == contract",
         "icon": "asset/copy.svg",
-        "when": "view == sc-deploy-history && viewItem == contract"
+        "when": "view == scLens.deployHistoryTree && viewItem == contract"
       },
       {
-        "command": "extension.solidity-debug.debugContract",
+        "command": "scLens.deployHistory.debugContract",
         "title": "Debug Contract",
         "shortTitle": "Debug",
-        "enablement": "view == sc-deploy-history && viewItem == contract",
+        "enablement": "view == scLens.deployHistoryTree && viewItem == contract",
         "icon": "asset/debug.svg",
-        "when": "view == sc-deploy-history && viewItem == contract"
+        "when": "view == scLens.deployHistoryTree && viewItem == contract"
       },
       {
-        "command": "extension.solidity-debug.copyTxHash",
+        "command": "scLens.deployHistory.copyTxHash",
         "title": "Copy Transaction Hash",
         "shortTitle": "Copy",
-        "enablement": "view == sc-deploy-history && viewItem == transaction",
+        "enablement": "view == scLens.deployHistoryTree && viewItem == transaction",
         "icon": "asset/copy.svg",
-        "when": "view == sc-deploy-history && viewItem == transaction"
+        "when": "view == scLens.deployHistoryTree && viewItem == transaction"
       },
       {
-        "command": "extension.solidity-debug.debugTransaction",
+        "command": "scLens.deployHistory.debugTransaction",
         "title": "Debug Transaction",
         "shortTitle": "Debug",
-        "enablement": "view == sc-deploy-history && viewItem == transaction",
+        "enablement": "view == scLens.deployHistoryTree && viewItem == transaction",
         "icon": "asset/debug.svg",
-        "when": "view == sc-deploy-history && viewItem == transaction"
+        "when": "view == scLens.deployHistoryTree && viewItem == transaction"
       },
       {
-        "command": "extension.solidity-debug.settings",
+        "command": "scLens.settings",
         "title": "SCLens Settings",
         "shortTitle": "Settings",
-        "enablement": "view == sc-settings",
+        "enablement": "view == scLens.settingsTree",
         "icon": "asset/settings.svg",
-        "when": "view == sc-settings"
+        "when": "view == scLens.settingsTree"
       },
       {
-        "command": "extension.solidity-debug.settings.addAccount",
+        "command": "scLens.settings.addAccount",
         "title": "Add Account Address",
         "shortTitle": "Account Address",
-        "enablement": "view == sc-settings && viewItem == account",
+        "enablement": "view == scLens.settingsTree && viewItem == account",
         "icon": "asset/add.svg",
-        "when": "view == sc-settings"
+        "when": "view == scLens.settingsTree"
       }
     ],
     "menus": {
       "view/item/context": [
         {
-          "command": "extension.solidity-debug.copyContractAddress",
-          "when": "view == sc-deploy-history && viewItem == contract",
+          "command": "scLens.deployHistory.copyContractAddress",
+          "when": "view == scLens.deployHistoryTree && viewItem == contract",
           "group": "inline@2"
         },
         {
-          "command": "extension.solidity-debug.debugContract",
-          "when": "view == sc-deploy-history && viewItem == contract",
+          "command": "scLens.deployHistory.debugContract",
+          "when": "view == scLens.deployHistoryTree && viewItem == contract",
           "group": "inline@1"
         },
         {
-          "command": "extension.solidity-debug.copyTxHash",
-          "when": "view == sc-deploy-history && viewItem == transaction",
+          "command": "scLens.deployHistory.copyTxHash",
+          "when": "view == scLens.deployHistoryTree && viewItem == transaction",
           "group": "inline@2"
         },
         {
-          "command": "extension.solidity-debug.debugTransaction",
-          "when": "view == sc-deploy-history && viewItem == transaction",
+          "command": "scLens.deployHistory.debugTransaction",
+          "when": "view == scLens.deployHistoryTree && viewItem == transaction",
           "group": "inline@1"
         },
         {
-          "command": "extension.solidity-debug.settings",
-          "when": "view == sc-settings",
+          "command": "scLens.settings",
+          "when": "view == scLens.settingsTree",
           "group": "inline@2"
         },
         {
-          "command": "extension.solidity-debug.settings.addAccount",
-          "when": "view == sc-settings && viewItem == account",
+          "command": "scLens.settings.addAccount",
+          "when": "view == scLens.settingsTree && viewItem == account",
           "group": "inline@1"
         }
       ]
@@ -252,13 +252,13 @@
     "views": {
       "sc-act-bar": [
         {
-          "id": "sc-settings",
+          "id": "scLens.settingsTree",
           "name": "Settings"
         }
       ],
       "debug": [
         {
-          "id": "sc-deploy-history",
+          "id": "scLens.deployHistoryTree",
           "name": "Contract Deploy History",
           "when": "workspaceHasSolidity",
           "icon": "asset/smart_contract.svg",

@@ -6,7 +6,7 @@ import { userContext } from '../../common/userContext';
 
 export class SettingsTreeViewProvider implements vscode.TreeDataProvider<SettingsItem> {
     // vscode extension contributes.views id
-    public static readonly viewId = "sc-settings";
+    public static readonly viewId = "scLens.settingsTree";
 
     private _onDidChangeTreeData: vscode.EventEmitter<SettingsItem | null> = new vscode.EventEmitter<SettingsItem | null>();
     public readonly onDidChangeTreeData: vscode.Event<SettingsItem | null> = this._onDidChangeTreeData.event;
@@ -17,9 +17,9 @@ export class SettingsTreeViewProvider implements vscode.TreeDataProvider<Setting
         userContext.attachAccountTreeView(this);
 
         // register item select command
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.settings',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.settings',
             this.showMenu.bind(this)));
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.settings.addAccount',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.settings.addAccount',
             async (viewItem: SettingsItem) => {
                 vscode.window.showInformationMessage('not implement');
             }));

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 export class SettingsWebViewProvider implements vscode.WebviewViewProvider {
 
-	public static readonly viewId = 'sc-settings';
+	public static readonly viewId = 'scLens.settingsTree';
 	private readonly extensionUri: vscode.Uri;
 
 	private view?: vscode.WebviewView;

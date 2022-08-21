@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 export class HistoryTreeViewProvider implements vscode.TreeDataProvider<HistoryItem> {
     // vscode extension contributes.views id
-    static viewId = "sc-deploy-history";
+    static viewId = "scLens.deployHistoryTree";
 
     private _onDidChangeTreeData: vscode.EventEmitter<HistoryItem | null> = new vscode.EventEmitter<HistoryItem | null>();
 
@@ -18,12 +18,12 @@ export class HistoryTreeViewProvider implements vscode.TreeDataProvider<HistoryI
         userContext.attachHistoryTreeView(this);
 
         // register item commands
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyContractAddress',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.deployHistory.copyContractAddress',
             async (viewItem: HistoryItem) => {
                 vscode.env.clipboard.writeText(viewItem.data);
                 vscode.window.showInformationMessage('Contract Address Copied:' + viewItem.data);
             }));
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugContract',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.deployHistory.debugContract',
             async (viewItem: HistoryItem) => {
                 const contractAddress = viewItem.data;
                 const contractHistory = userContext.contractHistory[contractAddress];
@@ -42,12 +42,12 @@ export class HistoryTreeViewProvider implements vscode.TreeDataProvider<HistoryI
                     "program": contractHistory.filePath
                 });
             }));
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.copyTxHash',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.deployHistory.copyTxHash',
             async (viewItem: HistoryItem) => {
                 vscode.env.clipboard.writeText(viewItem.data);
                 vscode.window.showInformationMessage('Transaction Hash Copied:' + viewItem.data);
             }));
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.debugTransaction',
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.deployHistory.debugTransaction',
             async (viewItem: HistoryItem) => {
                 const contractViewItem = viewItem.parent!;
                 const programFile = userContext.contractHistory[contractViewItem.data].filePath;

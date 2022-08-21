@@ -8,7 +8,7 @@ export class SolidityConfigurationProvider implements vscode.DebugConfigurationP
 
     constructor(context: vscode.ExtensionContext) {
 
-        context.subscriptions.push(vscode.commands.registerCommand('extension.solidity-debug.getProgramName', async config => {
+        context.subscriptions.push(vscode.commands.registerCommand('scLens.debugConfig.getProgramName', async config => {
             const fileList: { [releativePath: string]: vscode.Uri; } = {};
             for (const iterator of vscode.workspace.workspaceFolders ?? []) {
                 const workspacePath = iterator.uri.fsPath;
