@@ -592,7 +592,10 @@ export class MockRuntime extends EventEmitter {
 				|| traceLog.op.startsWith('PUSH')
 				|| traceLog.op.startsWith('JUMP')
 				|| traceLog.op.startsWith('CALLDATASIZE')) {
-				continue;
+				// we need to stop before jump into other function
+				if (newLocation.jump !== 'i') {
+					continue;
+				}
 			}
 
 			// if source location not change, continue
