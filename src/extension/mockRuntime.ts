@@ -101,17 +101,6 @@ export function timeout(ms: number) {
 }
 
 /**
- * Line: find a next instruction with diff source map
- * Instruction: execute next instruction
- * Breakpoint: find a next instruction match next breakpoint
- */
-enum StepType {
-	Line,
-	Instruction,
-	Breakpoint,
-}
-
-/**
  * A Mock runtime with minimal debugger functionality.
  * MockRuntime is a hypothetical (aka "Mock") "execution engine with debugging support":
  * it takes a Markdown (*.md) file and "executes" it by "running" through the text lines
@@ -147,7 +136,6 @@ export class MockRuntime extends EventEmitter {
 
 	// maps from sourceFile to array of IRuntimeBreakpoint
 	private breakPoints = new Map<string, IRuntimeBreakpoint[]>();
-	private curbreakPointId = -1;
 
 	// all instruction breakpoint addresses
 	private instructionBreakpoints = new Set<number>();
@@ -173,6 +161,14 @@ export class MockRuntime extends EventEmitter {
 	private tx!: Transaction;
 	private contractAddress!: string;
 	private vmTraceIndex = 0;
+	// debug context
+	// 
+	private fileInfo: {
+		[fileId: number]: {
+			filePath: string;
+			lineOffset: number[];
+		};
+	} = {};
 
 	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
 		super();
@@ -309,13 +305,13 @@ export class MockRuntime extends EventEmitter {
 
 		try {
 			await this.resolveTrace(txHash!, this.compilationResult.contracts![contractPath][contractName].evm);
-		} catch (error) {
-			vscode.window.showErrorMessage(JSON.stringify(error));
+		} catch (error: any) {
+			vscode.window.showErrorMessage("fail to resolve", error);
 			this.sendEvent('end');
 			return;
 		}
 
-		// reset 
+		// reset context 
 		this.curLocation = {
 			start: -1,
 			length: -1,
@@ -324,6 +320,13 @@ export class MockRuntime extends EventEmitter {
 			modifierDepth: 0
 		};
 		this.contractAddress = contractAddress!;
+		this.fileInfo = {};
+		for (const [filePath, compilationSource] of Object.entries(this.compilationResult.sources!)) {
+			this.fileInfo[compilationSource.id] = {
+				filePath,
+				lineOffset: this.getLineOffset((await this.fileAccessor.readFile(filePath)).toString())
+			};
+		}
 		this.continue(false);
 		InstructionListViewProvider.triggerRefresh((await this.codeManager.getInstructions(contractAddress!)).instructions);
 	}
@@ -337,28 +340,29 @@ export class MockRuntime extends EventEmitter {
 	 * Continue execution to the end/beginning.
 	 */
 	public async continue(reverse: boolean) {
-		this.execute(reverse, StepType.Breakpoint);
+		const nextVmIndex = await this.findNextBreakpoint(reverse);
+		await this.jumpTo(nextVmIndex);
 	}
 
 	/**
 	 * Step to the next/previous non empty line.
 	 */
-	public step(instruction: boolean, reverse: boolean) {
-		this.execute(reverse, instruction ? StepType.Instruction : StepType.Line);
+	public async step(instruction: boolean, reverse: boolean) {
+		const nextVmIndex = await this.findNextLine(reverse, this.vmTraceIndex, false);
+		this.jumpTo(nextVmIndex);
 	}
 
-	/**
-	 * "Step into" for Mock debug means: go to next character
-	 */
-	public stepIn(targetId: number | undefined) {
-		// TODO find a jump in vmTrace index
+	public async stepIn(targetId: number | undefined) {
+		const nextVmIndex = await this.findFuncScopeBound(false);
+		this.jumpTo(nextVmIndex);
 	}
 
 	/**
 	 * "Step out" for Mock debug means: go to previous character
 	 */
-	public stepOut() {
-		// TODO find a jump out vmTrace index
+	public async stepOut() {
+		const nextVmIndex = await this.findFuncScopeBound(true);
+		this.jumpTo(nextVmIndex);
 	}
 
 	public getStepInTargets(frameId: number): IRuntimeStepInTargets[] {
@@ -552,103 +556,154 @@ export class MockRuntime extends EventEmitter {
 		await this.callTree.newTraceLoaded();
 	}
 
-	private async execute(reverse: boolean, stepType: StepType) {
-		const fileInfo: {
-			[id: number]: {
-				filePath: string;
-				lineOffset: number[];
-			};
-		} = {};
-		for (const [filePath, compilationSource] of Object.entries(this.compilationResult.sources!)) {
-			fileInfo[compilationSource.id] = {
-				filePath,
-				lineOffset: this.getLineOffset((await this.fileAccessor.readFile(filePath)).toString())
-			};
-
+	/**
+	 * use for stepIn and stepOut
+	 */
+	private async findFuncScopeBound(out: boolean): Promise<number> {
+		let nextTraceindex = -1;
+		if (out) {
+			const funcScopeEnd = this.callTree.findScope(this.vmTraceIndex)!.lastStep;
+			nextTraceindex = await this.findNextLine(false, funcScopeEnd, false);
+		} else {
+			nextTraceindex = await this.findNextLine(false, this.vmTraceIndex, true);
 		}
+		return nextTraceindex;
+	}
 
-		if (stepType !== StepType.Breakpoint) {
-			this.curbreakPointId = -1;
-		}
-
+	private async findNextBreakpoint(reverse: boolean) {
+		let nextTraceindex = -1;
+		let curTraceIndex = this.vmTraceIndex;
+		const maxIndex = this.traceManager.getLength();
 		// find next valid location
-		while (reverse ? this.vmTraceIndex >= 0 : this.vmTraceIndex < this.traceManager.getLength()) {
-			reverse ? this.vmTraceIndex-- : this.vmTraceIndex++;
-			if (this.vmTraceIndex < 0 || this.vmTraceIndex >= this.traceManager.getLength()) {
-				this.sendEvent('end');
-				return;
-			}
-			const newLocation = await this.callTree.extractSourceLocation(this.vmTraceIndex);
-			if (!newLocation || !fileInfo[newLocation.file]) {
-				continue;
-			}
-			const oldLocation = this.curLocation;
-			const traceLog = this.traceManager.getTraceLog(this.vmTraceIndex);
-
-			let match = false;
-			switch (stepType) {
-				case StepType.Line:
-					// filter some op
-					if (traceLog.op.startsWith('DUP')
-						|| traceLog.op.startsWith('PUSH')
-						|| traceLog.op.startsWith('JUMP')
-						|| traceLog.op.startsWith('CALLDATASIZE')) {
-						continue;
-					}
-					// if source location not change, continue
-					if (newLocation.file === oldLocation.file
-						&& newLocation.start === oldLocation.start
-						&& newLocation.length === oldLocation.length) {
-						continue;
-					}
-					match = true;
-					break;
-				case StepType.Instruction:
-					match = true;
-					break;
-				case StepType.Breakpoint:
-					const filePath = fileInfo[newLocation.file].filePath;
-					const bps = this.breakPoints.get(filePath);
-					const startLine = util.findLowerBound(newLocation.start, fileInfo[newLocation.file].lineOffset);
-
-					bps?.forEach((bp) => {
-						if (bp.line === startLine
-							&& bp.id !== this.curbreakPointId) {
-							this.curbreakPointId = bp.id;
-							match = true;
-						}
-					});
-					break;
-			}
-
-			if (match) {
-				// find a source location change
-				this.currentLine = util.findLowerBound(newLocation.start, fileInfo[newLocation.file].lineOffset);
-				this.sourceFile = fileInfo[newLocation.file].filePath;
-				// highlight
-				const startLine = this.currentLine;
-				const startColum = newLocation.start - fileInfo[newLocation.file].lineOffset[startLine] - 1;
-				const endLine = util.findLowerBound(newLocation.start + newLocation.length - 1, fileInfo[newLocation.file].lineOffset);
-				const endColum = newLocation.start + newLocation.length - fileInfo[newLocation.file].lineOffset[endLine] - 1;
-
-				this.currentColumn = startColum;
-
-				this.decorator.decorate(vscode.window.activeTextEditor!,
-					startLine,
-					startColum,
-					endLine,
-					endColum
-				);
-				this.curLocation = newLocation;
-				if (stepType === StepType.Breakpoint) {
-					this.sendEvent('stopOnBreakpoint');
-				} else {
-					this.sendEvent('stopOnStep');
-				}
-				InstructionListViewProvider.triggerSelect(await this.codeManager.getInstructionIndex(this.contractAddress, this.vmTraceIndex));
+		while (reverse ? curTraceIndex >= 0 : curTraceIndex < maxIndex) {
+			reverse ? curTraceIndex-- : curTraceIndex++;
+			if (curTraceIndex < 0 || curTraceIndex >= maxIndex) {
 				break;
 			}
+
+			const newLocation = await this.callTree.extractSourceLocation(curTraceIndex);
+			if (!newLocation || !this.fileInfo[newLocation.file]) {
+				continue;
+			}
+
+			const traceLog = this.traceManager.getTraceLog(curTraceIndex);
+			// filter some op
+			if (traceLog.op.startsWith('DUP')
+				|| traceLog.op.startsWith('PUSH')
+				|| traceLog.op.startsWith('JUMP')
+				|| traceLog.op.startsWith('CALLDATASIZE')) {
+				continue;
+			}
+
+			// if source location not change, continue
+			const filePath = this.fileInfo[newLocation.file].filePath;
+			const bps = this.breakPoints.get(filePath);
+			const startLine = util.findLowerBound(newLocation.start, this.fileInfo[newLocation.file].lineOffset);
+
+			let match = false;
+			bps?.forEach((bp) => {
+				if (bp.line === startLine) {
+					match = true;
+				}
+			});
+			if (!match) {
+				continue;
+			}
+			nextTraceindex = curTraceIndex;
+			break;
 		}
+
+		return nextTraceindex;
+	}
+
+	private async findNextLine(reverse: boolean, startIndex: number, stepIn: boolean) {
+		let nextVmTraceindex = -1;
+		let curTraceIndex = startIndex;
+		const maxIndex = this.traceManager.getLength();
+		const oldIndex = startIndex;
+		const oldLocation = this.curLocation;
+		const oldScopeEnd = this.callTree.findScope(curTraceIndex)!.lastStep;
+		// find next valid location
+		while (reverse ? curTraceIndex >= 0 : curTraceIndex < maxIndex) {
+			reverse ? curTraceIndex-- : curTraceIndex++;
+			if (curTraceIndex < 0 || curTraceIndex >= maxIndex) {
+				break;
+			}
+
+			const newLocation = await this.callTree.extractSourceLocation(curTraceIndex);
+			if (!newLocation || !this.fileInfo[newLocation.file]) {
+				continue;
+			}
+
+			const traceLog = this.traceManager.getTraceLog(curTraceIndex);
+			// filter some op
+			if (traceLog.op.startsWith('DUP')
+				|| traceLog.op.startsWith('PUSH')
+				|| traceLog.op.startsWith('JUMP')
+				|| traceLog.op.startsWith('CALLDATASIZE')) {
+				continue;
+			}
+			// if source location not change, continue
+			if (newLocation.file === oldLocation.file
+				&& newLocation.start === oldLocation.start
+				&& newLocation.length === oldLocation.length) {
+				continue;
+			}
+			// check if jump into other function scope
+			if (!stepIn) {
+				const scope = this.callTree.findScope(curTraceIndex);
+				const nextScopeStart = scope!.firstStep;
+				const nextScopeEnd = scope!.lastStep;
+				if (nextScopeStart === nextScopeEnd && nextScopeStart === 0) {
+					continue;
+				}
+				if (nextScopeEnd !== oldScopeEnd) {
+					const closestFuncCallIndex = util.findLowerBound(oldIndex, this.callTree.functionCallStack);
+					if (closestFuncCallIndex + 1 < this.callTree.functionCallStack.length
+						&& curTraceIndex >= this.callTree.functionCallStack[closestFuncCallIndex]) {
+						// immediately jump to function scope end
+						curTraceIndex = nextScopeEnd;
+					}
+				}
+			}
+			nextVmTraceindex = curTraceIndex;
+			break;
+		}
+
+		return nextVmTraceindex;
+	}
+
+	private async jumpTo(targetTraceIndex: number) {
+		if (targetTraceIndex === -1) {
+			this.sendEvent('end');
+			return;
+		}
+
+		const newLocation = await this.callTree.extractSourceLocation(targetTraceIndex);
+		if (newLocation === null) {
+			throw new Error('[jumpTo] target location should not be null');
+		}
+		const curFileInfo = this.fileInfo[newLocation.file];
+		// find a source location range
+		const startLine = util.findLowerBound(newLocation.start, curFileInfo.lineOffset);
+		const startColum = newLocation.start - curFileInfo.lineOffset[startLine] - 1;
+		const endLine = util.findLowerBound(newLocation.start + newLocation.length - 1, curFileInfo.lineOffset);
+		const endColum = newLocation.start + newLocation.length - curFileInfo.lineOffset[endLine] - 1;
+		// highlight
+		this.decorator.decorate(vscode.window.activeTextEditor!,
+			startLine,
+			startColum,
+			endLine,
+			endColum
+		);
+		// save context
+		InstructionListViewProvider.triggerSelect(await this.codeManager.getInstructionIndex(this.contractAddress, targetTraceIndex));
+		this.currentColumn = startColum;
+		this.sourceFile = curFileInfo.filePath;
+		this.currentLine = startLine;
+		this.curLocation = newLocation;
+		this.vmTraceIndex = targetTraceIndex;
+		this.sendEvent('stopOnStep');
 	}
 
 	private getLineOffset(source: string) {

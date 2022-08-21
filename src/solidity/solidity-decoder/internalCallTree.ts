@@ -44,7 +44,7 @@ export class InternalCallTree {
   scopeStarts: {
     [key: number]: string;
   } = {};
-  functionCallStack: any;
+  functionCallStack: number[] = [];
   functionDefinitionsByScope: any;
   variableDeclarationByFile: {
     [filePath: string]: {
@@ -52,12 +52,12 @@ export class InternalCallTree {
     };
   } = {};
   functionDefinitionByFile: {
-    [filePath: string]: {
+    [fileId: number]: {
       [src: string]: any;
     };
   } = {};
   astWalker!: AstWalker;
-  reducedTrace: any;
+  reducedTrace: number[] = [];
 
   constructor(traceManager: TraceManager, solidityProxy: SolidityProxy, codeManager: CodeManager) {
     // this.debugWithGeneratedSources = false
