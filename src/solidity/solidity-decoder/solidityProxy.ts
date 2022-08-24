@@ -6,7 +6,7 @@ import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitio
 import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract, GeneratedSource } from '../../common/type';
 import { TypesOffsets } from './decodeInfo';
 import { TraceManager } from '../trace/traceManager';
-import { SourceLocation } from '../code/codeManager';
+import { CodeManager, SourceLocation } from '../code/codeManager';
 
 export interface ContractObject {
   name: string,
@@ -15,16 +15,16 @@ export interface ContractObject {
 
 export class SolidityProxy {
   cache;
-  getCode;
   sources!: ComplitionSources;
   contracts!: CompiledContractObj;
   private traceManager: TraceManager;
+  private codeManager: CodeManager;
 
-  constructor(traceManager: TraceManager, getCode) {
+  constructor(traceManager: TraceManager, codeManager: CodeManager) {
     this.cache = new Cache();
     this.reset({});
     this.traceManager = traceManager;
-    this.getCode = getCode;
+    this.codeManager = codeManager;
   }
 
   /**
@@ -58,8 +58,8 @@ export class SolidityProxy {
     if (this.cache.contractObjectByAddress[address]) {
       return this.cache.contractObjectByAddress[address];
     }
-    const code = await this.getCode(address);
-    const contract = contractObjectFromCode(this.contracts, code.deployedBytecode.object, address);
+    const code = await this.codeManager.getInstructions(address);
+    const contract = contractObjectFromCode(this.contracts, code.bytecode, address);
     this.cache.contractObjectByAddress[address] = contract!;
     return contract;
   }
@@ -110,7 +110,7 @@ export class SolidityProxy {
     * @param {Object} sourceLocation  - source location containing the 'file' to retrieve the AST from
     * @return {Object} - AST of the current file
     */
-  ast(sourceLocation:SourceLocation, generatedSources: GeneratedSource[] | null) {
+  ast(sourceLocation: SourceLocation, generatedSources: GeneratedSource[] | null) {
     const file = this.fileNameFromIndex(sourceLocation.file);
     if (!file && generatedSources && generatedSources.length) {
       for (const source of generatedSources) {

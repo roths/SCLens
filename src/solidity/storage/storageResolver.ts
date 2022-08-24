@@ -11,18 +11,18 @@ import { Storagelocation } from '../solidity-decoder/decodeInfo';
   * (TODO: one instance need to be shared over all the components)
   */
 export class StorageResolver {
-  storageByAddress: {
+  private storageByAddress: {
     [key: string]: {
       storage?: StorageMap,
       complete?: boolean;
     };
   };
-  preimagesMappingByAddress: {
+  private preimagesMappingByAddress: {
     [key: string]: { [key: string]: { [key: string]: string; }; };
   };
-  maxSize: number;
+  private maxSize: number;
   web3: Web3;
-  zeroSlot: string;
+  private zeroSlot: string;
 
   constructor(web3: Web3) {
     this.storageByAddress = {};
@@ -42,7 +42,7 @@ export class StorageResolver {
    * @param {Function} - callback - contains a map: [hashedKey] = {key, hashedKey, value}
    */
   storageRange(tx: Transaction, stepIndex: number, address: string) {
-    return this.storageRangeInternal(this, this.zeroSlot, tx, stepIndex, address);
+    return this.storageRangeInternal(this.zeroSlot, tx, stepIndex, address);
   }
 
   /**
@@ -75,7 +75,7 @@ export class StorageResolver {
    * @param {Function} - callback - {key, hashedKey, value} -
    */
   async storageSlot(slot: string, tx: Transaction, stepIndex: number, address: string) {
-    const storage = await this.storageRangeInternal(this, slot, tx, stepIndex, address);
+    const storage = await this.storageRangeInternal(slot, tx, stepIndex, address);
     return (storage[slot] !== undefined ? storage[slot] : null);
   }
 
@@ -95,20 +95,20 @@ export class StorageResolver {
    *   even if the next 1000 items are not in the cache.
    * - If @arg slot is not cached, the corresponding value will be resolved and the next 1000 slots.
    */
-  async storageRangeInternal(self: StorageResolver, slotKey: string, tx: Transaction, stepIndex: number, address: string): Promise<StorageMap> {
-    const cached = this.fromCache(self, address);
+  async storageRangeInternal(slotKey: string, tx: Transaction, stepIndex: number, address: string): Promise<StorageMap> {
+    const cached = this.fromCache(address);
     if (cached && cached.storage![slotKey]) { // we have the current slot in the cache and maybe the next 1000...
       return cached.storage!;
     }
-    const result = await this.storageRangeWeb3Call(tx, address, slotKey, self.maxSize);
+    const result = await this.storageRangeWeb3Call(tx, address, slotKey, this.maxSize);
     const storage: StorageMap = result?.storage ?? {};
     const nextKey = result?.nextKey ?? null;
-    if (!storage[slotKey] && slotKey !== self.zeroSlot) { // we don't cache the zero slot (could lead to inconsistency)
-      storage[slotKey] = { key: slotKey, value: self.zeroSlot };
+    if (!storage[slotKey] && slotKey !== this.zeroSlot) { // we don't cache the zero slot (could lead to inconsistency)
+      storage[slotKey] = { key: slotKey, value: this.zeroSlot };
     }
-    self.toCache(self, address, storage);
-    if (slotKey === self.zeroSlot && !nextKey) { // only working if keys are sorted !!
-      self.storageByAddress[address].complete = true;
+    this.toCache(address, storage);
+    if (slotKey === this.zeroSlot && !nextKey) { // only working if keys are sorted !!
+      this.storageByAddress[address].complete = true;
     }
     return storage;
   }
@@ -119,11 +119,11 @@ export class StorageResolver {
    * @param {String} address  - contract address
    * @return {String} - either the entire known storage or a single value
    */
-  fromCache(self: StorageResolver, address: string) {
-    if (!self.storageByAddress[address]) {
+  fromCache(address: string) {
+    if (!this.storageByAddress[address]) {
       return null;
     }
-    return self.storageByAddress[address];
+    return this.storageByAddress[address];
   }
 
   /**
@@ -132,11 +132,11 @@ export class StorageResolver {
    * @param {String} address  - contract address
    * @param {Object} storage  - result of `storageRangeAtInternal`, contains {key, hashedKey, value}
    */
-  toCache(self: StorageResolver, address: string, storage: StorageMap) {
-    if (!self.storageByAddress[address]) {
-      self.storageByAddress[address] = {};
+  toCache(address: string, storage: StorageMap) {
+    if (!this.storageByAddress[address]) {
+      this.storageByAddress[address] = {};
     }
-    self.storageByAddress[address].storage = Object.assign(self.storageByAddress[address].storage || {}, storage);
+    this.storageByAddress[address].storage = Object.assign(this.storageByAddress[address].storage || {}, storage);
   }
 
   storageRangeWeb3Call(tx: Transaction, address: string, start: string, maxSize: number): Promise<StorageRangeResult | null> {

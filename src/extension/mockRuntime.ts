@@ -21,7 +21,6 @@ import { Transaction } from 'web3-core';
 import { StorageResolver } from '../solidity/storage/storageResolver';
 import { uiFlow } from '../common/userStoryFlow';
 import { InstructionListViewProvider } from './ui/instructionListView';
-import { Enum } from '../solidity/solidity-decoder/decodeInfo';
 
 export interface FileAccessor {
 	readFile(path: string): Promise<Uint8Array>;
@@ -156,13 +155,14 @@ export class MockRuntime extends EventEmitter {
 	private codeManager: CodeManager;
 	private storageResolver: StorageResolver;
 	private callTree!: InternalCallTree;
+	private solidityProxy: SolidityProxy;
+
+	// web3 context
 	private curLocation!: SourceLocation;
 	private decorator: Decorator;
 	private tx!: Transaction;
 	private contractAddress!: string;
 	private vmTraceIndex = 0;
-	// debug context
-	// 
 	private fileInfo: {
 		[fileId: number]: {
 			filePath: string;
@@ -177,6 +177,8 @@ export class MockRuntime extends EventEmitter {
 		init.extend(this.web3);
 		this.traceManager = new TraceManager(this.web3);
 		this.codeManager = new CodeManager(this.web3, this.traceManager);
+		this.solidityProxy = new SolidityProxy(this.traceManager, this.codeManager);
+		this.callTree = new InternalCallTree(this.traceManager, this.solidityProxy, this.codeManager);
 		this.decorator = new Decorator();
 		this.storageResolver = new StorageResolver(this.web3);
 	}
@@ -304,7 +306,7 @@ export class MockRuntime extends EventEmitter {
 		}
 
 		try {
-			await this.resolveTrace(txHash!, this.compilationResult.contracts![contractPath][contractName].evm);
+			await this.resolveTrace(txHash!);
 		} catch (error: any) {
 			vscode.window.showErrorMessage("fail to resolve", error);
 			this.sendEvent('end');
@@ -481,7 +483,7 @@ export class MockRuntime extends EventEmitter {
 
 		let a: RuntimeVariable[] = [];
 		const address = this.traceManager.getCurrentCalledAddressAt(this.vmTraceIndex)!;
-		const globalVar = await this.callTree.solidityProxy.extractStateVariablesAt(this.vmTraceIndex);
+		const globalVar = await this.solidityProxy.extractStateVariablesAt(this.vmTraceIndex);
 		const viewer = new StorageViewer({ stepIndex: this.vmTraceIndex, tx: this.tx, address },
 			this.storageResolver, this.traceManager);
 		const globalVarDecoded = await stateDecoder.decodeState(globalVar, viewer);
@@ -544,15 +546,10 @@ export class MockRuntime extends EventEmitter {
 
 	// private methods
 
-	private async resolveTrace(txHash: string, evm: any) {
+	private async resolveTrace(txHash: string) {
 		this.tx = await this.web3.eth.getTransaction(txHash);
 		await this.traceManager.resolveTrace(this.tx);
-
-		const solidityProxy = new SolidityProxy(this.traceManager, () => {
-			return evm;
-		});
-		solidityProxy.reset(this.compilationResult);
-		this.callTree = new InternalCallTree(this.traceManager, solidityProxy, this.codeManager);
+		this.solidityProxy.reset(this.compilationResult);
 		await this.callTree.newTraceLoaded();
 	}
 

@@ -22,10 +22,10 @@ import { AbiItem } from 'web3-utils';
 export class InternalCallTree {
   private includeLocalVariables = true;
   // event
-  solidityProxy: SolidityProxy;
-  traceManager: TraceManager;
-  codeManager: CodeManager;
-  scopes: {
+  private solidityProxy: SolidityProxy;
+  private traceManager: TraceManager;
+  private codeManager: CodeManager;
+  private scopes: {
     [scopeId: string]: {
       firstStep: number,
       isCreation: boolean,
@@ -41,23 +41,23 @@ export class InternalCallTree {
       };
     };
   } = {};
-  scopeStarts: {
+  private scopeStarts: {
     [key: number]: string;
   } = {};
   functionCallStack: number[] = [];
-  functionDefinitionsByScope: any;
-  variableDeclarationByFile: {
+  private functionDefinitionsByScope: any;
+  private variableDeclarationByFile: {
     [filePath: string]: {
       [src: string]: any[];
     };
   } = {};
-  functionDefinitionByFile: {
+  private functionDefinitionByFile: {
     [fileId: number]: {
       [src: string]: any;
     };
   } = {};
-  astWalker!: AstWalker;
-  reducedTrace: number[] = [];
+  private astWalker!: AstWalker;
+  private reducedTrace: number[] = [];
 
   constructor(traceManager: TraceManager, solidityProxy: SolidityProxy, codeManager: CodeManager) {
     // this.debugWithGeneratedSources = false
