@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { userContext } from './common/userContext';
 import { SolidityConfigurationProvider } from './extension/config/solidityConfiguration';
 import { SolidityDebugAdapterFactory } from './extension/config/solidityDebugAdapterFactory';
+import { activateLspClient, deactivateLspClient } from './extension/lspClient';
 import { HistoryTreeViewProvider } from './extension/ui/historyTreeView';
 import { InstructionListViewProvider } from './extension/ui/instructionListView';
 import { SettingsTreeViewProvider } from './extension/ui/settingsTreeView';
@@ -22,12 +23,14 @@ export function activate(context: vscode.ExtensionContext) {
 	// context.subscriptions.push(vscode.window.registerWebviewViewProvider(SettingsWebViewProvider.viewId, new SettingsWebViewProvider(context)));
 	InstructionListViewProvider.register(context);
 
+	activateLspClient(context);
 	console.log('ScLens extension active!');
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {
 	userContext.deactivate();
+	deactivateLspClient();
 
 	console.log('ScLens extension deactivate!');
 }
