@@ -10,69 +10,28 @@ class UserStoryFlow {
         const bytecode = compiledContract.evm.bytecode.object;
         const abi = compiledContract.abi;
         const contract = new web3.eth.Contract(abi);
-        const contractTx = contract.deploy({
+        const { accountAddress, pk } = userContext.getCurAccount();
+        const contractInstance = await contract.deploy({
             data: bytecode,
             arguments: [5],
-        });
-        const { accountAddress, pk } = userContext.getCurAccount();
-        const deployTransaction = await web3.eth.accounts.signTransaction(
-            {
-                // nonce: txCount + 3,
-                from: accountAddress,
-                data: contractTx.encodeABI(),
-                gas: 300000,
-            },
-            pk
-        );
-        const promise = web3.eth.sendSignedTransaction(deployTransaction.rawTransaction!);
-        promise.on('transactionHash', function (hash) {
-            console.log('transactionHash');
-            console.log(hash);
-            web3.eth.getTransaction(hash).then((tx) => {
-                console.log('立马拉取合约信息', tx)
-            })
-        }).on('sent', function (sent) {
-            console.log('sent');
-            console.log(sent);
-        }).on('error', console.error);
+        }).send({ from: accountAddress, gas: 300000 });
 
-        const createReceipt = await promise;
-        console.log('Contract createReceipt:', createReceipt);
-        return createReceipt.contractAddress ?? null;
+        console.log('Create contract instance:', contractInstance);
+        return contractInstance.options.address ?? null;
     }
 
-	public async invoke(web3: Web3, contractAbi: AbiItem[], contractAddress: string, methodInfo: any[]) {
-		const contract = new web3.eth.Contract(contractAbi, contractAddress);
-		const [methodName, ...params] = methodInfo;
-		const { accountAddress, pk } = userContext.getCurAccount();
-		console.log(
-			`Calling contract function '${methodName}' in address ${contractAddress} with params:${params.join(',')}`
-		);
-		const encoded = contract.methods[methodName](...params).encodeABI();
-		const tx = await web3.eth.accounts.signTransaction(
-			{
-				from: accountAddress,
-				to: contractAddress,
-				data: encoded,
-				gas: '3000000',
-			},
-			pk
-		);
-		const promise = web3.eth.sendSignedTransaction(tx.rawTransaction!);
-		promise.on('transactionHash', function (hash) {
-			console.log('transactionHash');
-			console.log(hash);
-            web3.eth.getTransaction(hash).then((tx) => {
-                console.log('立马拉取函数调用信息', tx)
-            })
-		}).on('sent', function (sent) {
-			console.log('sent');
-			console.log(sent);
-		}).on('error', console.error);
-		const createReceipt = await promise;
-		console.log('invoke successfull with createReceipt:', createReceipt);
-		return createReceipt.transactionHash;
-	}
+    public async invoke(web3: Web3, contractAbi: AbiItem[], contractAddress: string, methodInfo: any[]) {
+        const contractInstance = new web3.eth.Contract(contractAbi, contractAddress);
+        const [methodName, ...params] = methodInfo;
+        const { accountAddress, pk } = userContext.getCurAccount();
+        console.log(
+            `Calling contract function '${methodName}' in address ${contractAddress} with params:${params.join(',')}`
+        );
+
+        const createReceipt = await contractInstance.methods[methodName](...params).send({ from: accountAddress, gas: 300000 });
+        console.log('invoke successfull with createReceipt:', createReceipt);
+        return createReceipt.transactionHash;
+    }
 }
 
 export const uiFlow = new UserStoryFlow();

@@ -16,28 +16,28 @@
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
-			"type": "object",
-			"title": "Example configuration",
-			"properties": {
-				"languageServerExample.maxNumberOfProblems": {
-					"scope": "resource",
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
-				},
-				"languageServerExample.trace.server": {
-					"scope": "window",
-					"type": "string",
-					"enum": [
-						"off",
-						"messages",
-						"verbose"
-					],
-					"default": "off",
-					"description": "Traces the communication between VS Code and the language server."
-				}
-			}
-		},
+      "type": "object",
+      "title": "Example configuration",
+      "properties": {
+        "languageServerExample.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        },
+        "languageServerExample.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    },
     "debuggers": [
       {
         "type": "solidity",
@@ -331,6 +331,7 @@
     "@remix-project/remix-astwalker": "^0.0.44",
     "@remix-project/remix-debug": "^0.5.14",
     "@remix-project/remix-lib": "^0.5.14",
+    "@remix-project/remix-simulator": "^0.2.16-alpha.0",
     "await-notify": "^1.0.1",
     "axios": "^0.27.2",
     "ethereumjs-util": "^7.1.5",

@@ -173,7 +173,7 @@ export class MockRuntime extends EventEmitter {
 	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
 		super();
 		this.solc = new SolcCompiler(context.extensionPath);
-		this.web3 = new Web3(userContext.network);
+		this.web3 = userContext.getWeb3Provider();
 		init.extend(this.web3);
 		this.traceManager = new TraceManager(this.web3);
 		this.codeManager = new CodeManager(this.web3, this.traceManager);

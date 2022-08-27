@@ -143,7 +143,6 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	const pattern = /\b[A-Z]{2,}\b/g;
 	let m: RegExpExecArray | null;
 
-	console.log("sdfsdf")
 	let problems = 0;
 	const diagnostics: Diagnostic[] = [];
 	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
