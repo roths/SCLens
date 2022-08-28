@@ -45,10 +45,8 @@ export function activate(context: vscode.ExtensionContext) {
     solc = new SolcCompiler(context.extensionPath);
     diagnosticsCollection = vscode.languages.createDiagnosticCollection("solidity");
 
-    var editor = vscode.window.activeTextEditor;
-
-    if (editor) {
-        diagnostics(editor.document);
+    if (vscode.window.activeTextEditor) {
+        diagnostics(vscode.window.activeTextEditor.document);
     }
 
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => editor ? diagnostics(editor.document) : undefined));

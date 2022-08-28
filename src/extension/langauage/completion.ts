@@ -88,7 +88,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
                         }
                         tmpScopeNodeMap.get(node.scope)!.push(node);
                     }
-                    this.astNodeMap.set(node.id, node);
+                    tmpAstNodeMap.set(node.id, node);
                 });
             }
             // save context
@@ -153,6 +153,11 @@ function parseAstToCompletionItem(node: AstNode) {
 
 export function activate(context: vscode.ExtensionContext) {
     const compilation = new SolidityCompletionItemProvider(context);
+
+    if (vscode.window.activeTextEditor) {
+        compilation.onEditorChange(vscode.window.activeTextEditor.document);
+    }
+
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('solidity', compilation, '.'));
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => compilation.onEditorChange(editor?.document)));
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => compilation.onEditorChange(event.document)));
