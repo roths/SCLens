@@ -3,9 +3,9 @@ import { HistoryTreeViewProvider } from "../extension/ui/historyTreeView";
 import path from "path";
 import vscode from "vscode";
 import fs from 'fs';
-import { workspaceFileAccessor } from "../extension/utils/file";
 import Web3 from "web3";
 import { extend, Provider } from "@remix-project/remix-simulator";
+import { getText, writeText } from "./utils/file";
 
 enum Web3Type {
     VM,
@@ -132,16 +132,12 @@ class UserContext {
     }
 
     private async saveContextCache() {
-        const cacheFile = this.getCacheFile();
-        await fs.promises.mkdir(path.dirname(cacheFile), { recursive: true });
-
-
-        await workspaceFileAccessor.writeFile(cacheFile, new TextEncoder().encode(JSON.stringify({
+        await writeText(this.getCacheFile(), JSON.stringify({
             selectedCompilerVersion: this.selectedCompilerVersion,
             selectedAccount: this.selectedAccount,
             contractHistory: this._contractHistory,
             accounts: this._accounts,
-        })));
+        }));
     }
 
     private async loadContextCache() {
@@ -152,7 +148,7 @@ class UserContext {
             return;
         }
 
-        const cache = JSON.parse(new TextDecoder().decode(await workspaceFileAccessor.readFile(cacheFile)));
+        const cache = JSON.parse(await getText(cacheFile));
 
         if (cache) {
             if (cache.selectedCompilerVersion) {

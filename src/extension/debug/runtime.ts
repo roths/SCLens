@@ -4,28 +4,24 @@
 
 import { EventEmitter } from 'events';
 import { TextDecoder, TextEncoder } from 'util';
-import { SolcCompiler } from '../common/solcCompiler';
+import { SolcCompiler } from '../../common/solcCompiler';
 import * as vscode from 'vscode';
-import { CompilationResult } from '../common/type';
+import { CompilationResult } from '../../common/type';
 import Web3 from 'web3';
 import { init } from '@remix-project/remix-debug';
-import { TraceManager } from '../solidity/trace/traceManager';
-import { CodeManager, SourceLocation } from '../solidity/code/codeManager';
-import { userContext } from '../common/userContext';
-import { multiStepInput } from '../client/multiStepInput';
-import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from '../solidity/solidity-decoder';
+import { TraceManager } from '../../solidity/trace/traceManager';
+import { CodeManager, SourceLocation } from '../../solidity/code/codeManager';
+import { userContext } from '../../common/userContext';
+import { multiStepInput } from '../ui/invokeFuncStepView';
+import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from '../../solidity/solidity-decoder';
 import { util } from '@remix-project/remix-lib';
-import { Decorator } from '../client/highlightUtil';
-import { StorageViewer } from '../solidity/storage/storageViewer';
+import { Decorator } from '../ui/highlightUtil';
+import { StorageViewer } from '../../solidity/storage/storageViewer';
 import { Transaction } from 'web3-core';
-import { StorageResolver } from '../solidity/storage/storageResolver';
-import { uiFlow } from '../common/userStoryFlow';
-import { InstructionListViewProvider } from './ui/instructionListView';
-
-export interface FileAccessor {
-	readFile(path: string): Promise<Uint8Array>;
-	writeFile(path: string, contents: Uint8Array): Promise<void>;
-}
+import { StorageResolver } from '../../solidity/storage/storageResolver';
+import { uiFlow } from '../../common/userStoryFlow';
+import { InstructionListViewProvider } from '../ui/instructionListView';
+import { getLineOffset, getSourceRange, getText } from '../../common/utils/file';
 
 export interface IRuntimeBreakpoint {
 	id: number;
@@ -114,7 +110,7 @@ export function timeout(ms: number) {
  * When implementing your own debugger extension for VS Code, you probably don't need this
  * class because you can rely on some existing debugger or runtime.
  */
-export class MockRuntime extends EventEmitter {
+export class SolidityRuntime extends EventEmitter {
 
 	// the initial (and one and only) file we are 'debugging'
 	private _sourceFile: string = '';
@@ -170,7 +166,7 @@ export class MockRuntime extends EventEmitter {
 		};
 	} = {};
 
-	constructor(context: vscode.ExtensionContext, private fileAccessor: FileAccessor) {
+	constructor(context: vscode.ExtensionContext) {
 		super();
 		this.solc = new SolcCompiler(context.extensionPath);
 		this.web3 = userContext.getWeb3Provider();
@@ -326,7 +322,7 @@ export class MockRuntime extends EventEmitter {
 		for (const [filePath, compilationSource] of Object.entries(this.compilationResult.sources!)) {
 			this.fileInfo[compilationSource.id] = {
 				filePath,
-				lineOffset: this.getLineOffset((await this.fileAccessor.readFile(filePath)).toString())
+				lineOffset: getLineOffset(await getText(filePath))
 			};
 		}
 		this.step(false, false);
@@ -689,10 +685,7 @@ export class MockRuntime extends EventEmitter {
 		}
 		const curFileInfo = this.fileInfo[newLocation.file];
 		// find a source location range
-		const startLine = util.findLowerBound(newLocation.start, curFileInfo.lineOffset);
-		const startColum = newLocation.start - curFileInfo.lineOffset[startLine] - 1;
-		const endLine = util.findLowerBound(newLocation.start + newLocation.length - 1, curFileInfo.lineOffset);
-		const endColum = newLocation.start + newLocation.length - curFileInfo.lineOffset[endLine] - 1;
+		const { startLine, startColum, endLine, endColum } = getSourceRange(curFileInfo.lineOffset, newLocation.start, newLocation.start + newLocation.length);
 		// highlight
 		this.decorator.decorate(vscode.window.activeTextEditor!,
 			startLine,
@@ -708,15 +701,6 @@ export class MockRuntime extends EventEmitter {
 		this.curLocation = newLocation;
 		this.vmTraceIndex = targetTraceIndex;
 		this.sendEvent('stopOnStep');
-	}
-
-	private getLineOffset(source: string) {
-		const ret = [];
-		ret.push(0);
-		for (let pos = source.indexOf('\n'); pos >= 0; pos = source.indexOf('\n', pos + 1)) {
-			ret.push(pos);
-		}
-		return ret;
 	}
 
 	private sendEvent(event: string, ...args: any[]): void {

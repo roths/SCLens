@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { BzzNode as Bzz } from '@erebos/bzz-node';
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -38,7 +39,7 @@ export class ImportResolver {
             const match = handler.match(importPath);
             if (match) {
                 const res: Imported | undefined = await handler.handle(handler.type, match);
-                if (res !== undefined) {
+                if (res !== undefined && handler.type !== 'local') {
                     this.previouslyHandled[importPath] = res;
                 }
                 return res;
@@ -69,7 +70,14 @@ export class ImportResolver {
     */
     private async handleLocal(filePath: string): Promise<Imported | undefined> {
         if (fs.existsSync(filePath)) {
-            return { content: await fs.promises.readFile(filePath, 'utf8') };
+            let content;
+            const doc = vscode.workspace.textDocuments.filter((item) => item.fileName === filePath);
+            if (doc.length > 0) {
+                content = await doc[0].getText();
+            } else {
+                content = await fs.promises.readFile(filePath, 'utf8');
+            }
+            return { content };
         }
     }
 

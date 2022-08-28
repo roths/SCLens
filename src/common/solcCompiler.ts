@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { CompilationResult, Source, CompilationError } from './type';
 import { ImportResolver } from './importResolver';
 import * as semver from 'semver';
+import { getText } from './utils/file';
 
 interface SolcVersionMap {
     // 0.8.15: "soljson-v0.8.15+commit.e14f2714.js"
@@ -38,10 +39,26 @@ export class SolcCompiler {
             }
         };
 
-        const code = await fs.promises.readFile(contractPath, 'utf8');
         const sources: Source = {};
-        sources[contractPath] = { content: code };
+        sources[contractPath] = { content: await getText(contractPath) };
+        return this.execSolc(sources, settings);
+    }
 
+    public async analyseAst(contractPath: string) {
+        const settings = {
+            optimizer: {
+                enabled: false
+            },
+            outputSelection: {
+                '*': {
+                    '': ['ast'],
+                    '*': []
+                },
+            }
+        };
+
+        const sources: Source = {};
+        sources[contractPath] = { content: await getText(contractPath) };
         return this.execSolc(sources, settings);
     }
 
@@ -59,10 +76,8 @@ export class SolcCompiler {
             }
         };
 
-        const code = await fs.promises.readFile(contractPath, 'utf8');
         const sources: Source = {};
-        sources[contractPath] = { content: code };
-
+        sources[contractPath] = { content: await getText(contractPath) };
         return this.execSolc(sources, settings);
     }
 

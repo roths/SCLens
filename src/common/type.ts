@@ -147,9 +147,68 @@ interface TypeDescription {
     typeString: string;
 }
 
+export enum AstNodeType {
+    SourceUnit = 'SourceUnit',
+    PragmaDirective = 'PragmaDirective',
+    ImportDirective = 'ImportDirective',
+    ContractDefinition = 'ContractDefinition',
+    InheritanceSpecifier = 'InheritanceSpecifier',
+    UsingForDirective = 'UsingForDirective',
+    StructDefinition = 'StructDefinition',
+    EnumDefinition = 'EnumDefinition',
+    EnumValue = 'EnumValue',
+    ParameterList = 'ParameterList',
+    OverrideSpecifier = 'OverrideSpecifier',
+    FunctionDefinition = 'FunctionDefinition',
+    VariableDeclaration = 'VariableDeclaration',
+    ModifierDefinition = 'ModifierDefinition',
+    ModifierInvocation = 'ModifierInvocation',
+    EventDefinition = 'EventDefinition',
+    ElementaryTypeName = 'ElementaryTypeName',
+    UserDefinedTypeName = 'UserDefinedTypeName',
+    FunctionTypeName = 'FunctionTypeName',
+    Mapping = 'Mapping',
+    ArrayTypeName = 'ArrayTypeName',
+    InlineAssembly = 'InlineAssembly',
+    Block = 'Block',
+    PlaceholderStatement = 'PlaceholderStatement',
+    IfStatement = 'IfStatement',
+    TryCatchClause = 'TryCatchClause',
+    TryStatement = 'TryStatement',
+    WhileStatement = 'WhileStatement',
+    DoWhileStatement = 'DoWhileStatement',
+    ForStatement = 'ForStatement',
+    Continue = 'Continue',
+    Break = 'Break',
+    Return = 'Return',
+    Throw = 'Throw',
+    EmitStatement = 'EmitStatement',
+    VariableDeclarationStatement = 'VariableDeclarationStatement',
+    ExpressionStatement = 'ExpressionStatement',
+    Conditional = 'Conditional',
+    Assignment = 'Assignment',
+    TupleExpression = 'TupleExpression',
+    UnaryOperation = 'UnaryOperation',
+    BinaryOperation = 'BinaryOperation',
+    FunctionCall = 'FunctionCall',
+    FunctionCallOptions = 'FunctionCallOptions',
+    NewExpression = 'NewExpression',
+    MemberAccess = 'MemberAccess',
+    IndexAccess = 'IndexAccess',
+    IndexRangeAccess = 'IndexRangeAccess',
+    ElementaryTypeNameExpression = 'ElementaryTypeNameExpression',
+    Literal = 'Literal',
+    Identifier = 'Identifier',
+    StructuredDocumentation = 'StructuredDocumentation',
+    YulTypedName = 'YulTypedName',
+    YulIdentifier = 'YulIdentifier',
+    YulLiteral = 'YulLiteral',
+    YulVariableDeclaration = 'YulVariableDeclaration',
+    YulBlock = 'YulBlock'
+}
 export interface SourceUnitAstNode {
     id: number;
-    nodeType: 'SourceUnit';
+    nodeType: AstNodeType.SourceUnit;
     src: string;
     absolutePath: string;
     exportedSymbols: Record<string, unknown>;
@@ -158,7 +217,7 @@ export interface SourceUnitAstNode {
 
 export interface PragmaDirectiveAstNode {
     id: number;
-    nodeType: 'PragmaDirective';
+    nodeType: AstNodeType.PragmaDirective;
     src: string;
     literals?: Array<string>;
 }
@@ -170,7 +229,7 @@ interface SymbolAlias {
 
 export interface ImportDirectiveAstNode {
     id: number;
-    nodeType: 'ImportDirective';
+    nodeType: AstNodeType.ImportDirective;
     src: string;
     absolutePath: string;
     file: string;
@@ -182,7 +241,7 @@ export interface ImportDirectiveAstNode {
 
 export interface ContractDefinitionAstNode {
     id: number;
-    nodeType: 'ContractDefinition';
+    nodeType: AstNodeType.ContractDefinition;
     src: string;
     name: string;
     documentation: string | null;
@@ -198,7 +257,7 @@ export interface ContractDefinitionAstNode {
 
 export interface InheritanceSpecifierAstNode {
     id: number;
-    nodeType: 'InheritanceSpecifier';
+    nodeType: AstNodeType.InheritanceSpecifier;
     src: string;
     baseName: UserDefinedTypeNameAstNode;
     arguments: LiteralAstNode | null;
@@ -206,7 +265,7 @@ export interface InheritanceSpecifierAstNode {
 
 export interface UsingForDirectiveAstNode {
     id: number;
-    nodeType: 'UsingForDirective';
+    nodeType: AstNodeType.UsingForDirective;
     src: string;
     libraryName: UserDefinedTypeNameAstNode;
     typeName: UserDefinedTypeNameAstNode | ElementaryTypeNameAstNode | null;
@@ -214,7 +273,7 @@ export interface UsingForDirectiveAstNode {
 
 export interface StructDefinitionAstNode {
     id: number;
-    nodeType: 'StructDefinition';
+    nodeType: AstNodeType.StructDefinition;
     src: string;
     name: string;
     visibility: string;
@@ -225,7 +284,7 @@ export interface StructDefinitionAstNode {
 
 export interface EnumDefinitionAstNode {
     id: number;
-    nodeType: 'EnumDefinition';
+    nodeType: AstNodeType.EnumDefinition;
     src: string;
     name: string;
     canonicalName: string;
@@ -234,28 +293,28 @@ export interface EnumDefinitionAstNode {
 
 export interface EnumValueAstNode {
     id: number;
-    nodeType: 'EnumValue';
+    nodeType: AstNodeType.EnumValue;
     src: string;
     name: string;
 }
 
 export interface ParameterListAstNode {
     id: number;
-    nodeType: 'ParameterList';
+    nodeType: AstNodeType.ParameterList;
     src: string;
     parameters: Array<VariableDeclarationAstNode>;
 }
 
 export interface OverrideSpecifierAstNode {
     id: number;
-    nodeType: 'OverrideSpecifier';
+    nodeType: AstNodeType.OverrideSpecifier;
     src: string;
     overrides: Array<UserDefinedTypeNameAstNode>;
 }
 
 export interface FunctionDefinitionAstNode {
     id: number;
-    nodeType: 'FunctionDefinition';
+    nodeType: AstNodeType.FunctionDefinition;
     src: string;
     name: string;
     documentation: string | null;
@@ -276,7 +335,7 @@ export interface FunctionDefinitionAstNode {
 
 export interface VariableDeclarationAstNode {
     id: number;
-    nodeType: 'VariableDeclaration';
+    nodeType: AstNodeType.VariableDeclaration;
     src: string;
     name: string;
     typeName: ElementaryTypeNameAstNode | UserDefinedTypeNameAstNode;
@@ -296,7 +355,7 @@ export interface VariableDeclarationAstNode {
 
 export interface ModifierDefinitionAstNode {
     id: number;
-    nodeType: 'ModifierDefinition';
+    nodeType: AstNodeType.ModifierDefinition;
     src: string;
     name: string;
     documentation: Record<string, unknown> | null;
@@ -310,7 +369,7 @@ export interface ModifierDefinitionAstNode {
 
 export interface ModifierInvocationAstNode {
     id: number;
-    nodeType: 'ModifierInvocation';
+    nodeType: AstNodeType.ModifierInvocation;
     src: string;
     modifierName: IdentifierAstNode;
     arguments: Array<LiteralAstNode> | null;
@@ -318,7 +377,7 @@ export interface ModifierInvocationAstNode {
 
 export interface EventDefinitionAstNode {
     id: number;
-    nodeType: 'EventDefinition';
+    nodeType: AstNodeType.EventDefinition;
     src: string;
     name: string;
     documentation: Record<string, unknown> | null;
@@ -328,7 +387,7 @@ export interface EventDefinitionAstNode {
 
 export interface ElementaryTypeNameAstNode {
     id: number;
-    nodeType: 'ElementaryTypeName';
+    nodeType: AstNodeType.ElementaryTypeName;
     src: string;
     name: string;
     typeDescriptions: TypeDescription;
@@ -337,7 +396,7 @@ export interface ElementaryTypeNameAstNode {
 
 export interface UserDefinedTypeNameAstNode {
     id: number;
-    nodeType: 'UserDefinedTypeName';
+    nodeType: AstNodeType.UserDefinedTypeName;
     src: string;
     name: string;
     referencedDeclaration: number;
@@ -347,7 +406,7 @@ export interface UserDefinedTypeNameAstNode {
 
 export interface FunctionTypeNameAstNode {
     id: number;
-    nodeType: 'FunctionTypeName';
+    nodeType: AstNodeType.FunctionTypeName;
     src: string;
     name: string;
     visibility: string;
@@ -359,7 +418,7 @@ export interface FunctionTypeNameAstNode {
 
 export interface MappingAstNode {
     id: number;
-    nodeType: 'Mapping';
+    nodeType: AstNodeType.Mapping;
     src: string;
     keyType: UserDefinedTypeNameAstNode | ElementaryTypeNameAstNode;
     valueType: UserDefinedTypeNameAstNode | ElementaryTypeNameAstNode;
@@ -368,7 +427,7 @@ export interface MappingAstNode {
 
 export interface ArrayTypeNameAstNode {
     id: number;
-    nodeType: 'ArrayTypeName';
+    nodeType: AstNodeType.ArrayTypeName;
     src: string;
     baseType: UserDefinedTypeNameAstNode | ElementaryTypeNameAstNode;
     length: LiteralAstNode | null;
@@ -385,7 +444,7 @@ interface externalReference {
 
 export interface InlineAssemblyAstNode {
     id: number;
-    nodeType: 'InlineAssembly';
+    nodeType: AstNodeType.InlineAssembly;
     src: string;
     AST: YulBlockAstNode;
     externalReferences: Array<externalReference>;
@@ -394,20 +453,20 @@ export interface InlineAssemblyAstNode {
 
 export interface BlockAstNode {
     id: number;
-    nodeType: 'Block';
+    nodeType: AstNodeType.Block;
     src: string;
     statements: Array<any>;
 }
 
 export interface PlaceholderStatementAstNode {
     id: number;
-    nodeType: 'PlaceholderStatement';
+    nodeType: AstNodeType.PlaceholderStatement;
     src: string;
 }
 
 export interface IfStatementAstNode {
     id: number;
-    nodeType: 'IfStatement';
+    nodeType: AstNodeType.IfStatement;
     src: string;
     condition: Record<string, unknown>;
     trueBody: BlockAstNode | ExpressionStatementAstNode;
@@ -416,7 +475,7 @@ export interface IfStatementAstNode {
 
 export interface TryCatchClauseAstNode {
     id: number;
-    nodeType: 'TryCatchClause';
+    nodeType: AstNodeType.TryCatchClause;
     src: string;
     errorName: string;
     parameters: ParameterListAstNode;
@@ -425,7 +484,7 @@ export interface TryCatchClauseAstNode {
 
 export interface TryStatementAstNode {
     id: number;
-    nodeType: 'TryStatement';
+    nodeType: AstNodeType.TryStatement;
     src: string;
     externalCall: Record<string, unknown>;
     clauses: Array<TryCatchClauseAstNode>;
@@ -433,7 +492,7 @@ export interface TryStatementAstNode {
 
 export interface WhileStatementAstNode {
     id: number;
-    nodeType: 'WhileStatement' | 'DoWhileStatement';
+    nodeType: AstNodeType.WhileStatement | AstNodeType.DoWhileStatement;
     src: string;
     condition: any;
     body: BlockAstNode | ExpressionStatementAstNode;
@@ -441,7 +500,7 @@ export interface WhileStatementAstNode {
 
 export interface ForStatementAstNode {
     id: number;
-    nodeType: 'ForStatement';
+    nodeType: AstNodeType.ForStatement;
     src: string;
     initializationExpression: VariableDeclarationStatementAstNode;
     condition: any;
@@ -451,19 +510,19 @@ export interface ForStatementAstNode {
 
 export interface ContinueAstNode {
     id: number;
-    nodeType: 'Continue';
+    nodeType: AstNodeType.Continue;
     src: string;
 }
 
 export interface BreakAstNode {
     id: number;
-    nodeType: 'Break';
+    nodeType: AstNodeType.Break;
     src: string;
 }
 
 export interface ReturnAstNode {
     id: number;
-    nodeType: 'Return';
+    nodeType: AstNodeType.Return;
     src: string;
     expression: Record<string, unknown> | null;
     functionReturnParameters: number;
@@ -471,20 +530,20 @@ export interface ReturnAstNode {
 
 export interface ThrowAstNode {
     id: number;
-    nodeType: 'Throw';
+    nodeType: AstNodeType.Throw;
     src: string;
 }
 
 export interface EmitStatementAstNode {
     id: number;
-    nodeType: 'EmitStatement';
+    nodeType: AstNodeType.EmitStatement;
     src: string;
     eventCall: FunctionCallAstNode;
 }
 
 export interface VariableDeclarationStatementAstNode {
     id: number;
-    nodeType: 'VariableDeclarationStatement';
+    nodeType: AstNodeType.VariableDeclarationStatement;
     src: string;
     assignments: Array<number>;
     declarations: Array<Record<string, unknown>>;
@@ -493,7 +552,7 @@ export interface VariableDeclarationStatementAstNode {
 
 export interface ExpressionStatementAstNode {
     id: number;
-    nodeType: 'ExpressionStatement';
+    nodeType: AstNodeType.ExpressionStatement;
     src: string;
     expression: any;
 }
@@ -509,7 +568,7 @@ interface ExpressionAttributes {
 
 export interface ConditionalAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'Conditional';
+    nodeType: AstNodeType.Conditional;
     src: string;
     condition: Record<string, unknown>;
     trueExpression: Record<string, unknown>;
@@ -518,7 +577,7 @@ export interface ConditionalAstNode extends ExpressionAttributes {
 
 export interface AssignmentAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'Assignment';
+    nodeType: AstNodeType.Assignment;
     src: string;
     operator: string;
     leftHandSide: any;
@@ -527,7 +586,7 @@ export interface AssignmentAstNode extends ExpressionAttributes {
 
 export interface TupleExpressionAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'TupleExpression';
+    nodeType: AstNodeType.TupleExpression;
     src: string;
     isInlineArray: boolean;
     components: Array<Record<string, unknown>>;
@@ -535,7 +594,7 @@ export interface TupleExpressionAstNode extends ExpressionAttributes {
 
 export interface UnaryOperationAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'UnaryOperation';
+    nodeType: AstNodeType.UnaryOperation;
     src: string;
     prefix: boolean;
     operator: string;
@@ -544,7 +603,7 @@ export interface UnaryOperationAstNode extends ExpressionAttributes {
 
 export interface BinaryOperationAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'BinaryOperation';
+    nodeType: AstNodeType.BinaryOperation;
     src: string;
     operator: string;
     leftExpression: Record<string, unknown>;
@@ -554,7 +613,7 @@ export interface BinaryOperationAstNode extends ExpressionAttributes {
 
 export interface FunctionCallAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'FunctionCall';
+    nodeType: AstNodeType.FunctionCall;
     src: string;
     expression: any;
     names: Array<any>;
@@ -565,7 +624,7 @@ export interface FunctionCallAstNode extends ExpressionAttributes {
 
 export interface FunctionCallOptionsAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'FunctionCallOptions';
+    nodeType: AstNodeType.FunctionCallOptions;
     src: string;
     expression: Record<string, unknown>;
     names: Array<string>;
@@ -574,14 +633,14 @@ export interface FunctionCallOptionsAstNode extends ExpressionAttributes {
 
 export interface NewExpressionAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'NewExpression';
+    nodeType: AstNodeType.NewExpression;
     src: string;
     typeName: UserDefinedTypeNameAstNode | ElementaryTypeNameAstNode;
 }
 
 export interface MemberAccessAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'MemberAccess';
+    nodeType: AstNodeType.MemberAccess;
     src: string;
     memberName: string;
     expression: any;
@@ -590,7 +649,7 @@ export interface MemberAccessAstNode extends ExpressionAttributes {
 
 export interface IndexAccessAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'IndexAccess';
+    nodeType: AstNodeType.IndexAccess;
     src: string;
     baseExpression: Record<string, unknown>;
     indexExpression: Record<string, unknown>;
@@ -598,7 +657,7 @@ export interface IndexAccessAstNode extends ExpressionAttributes {
 
 export interface IndexRangeAccessAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'IndexRangeAccess';
+    nodeType: AstNodeType.IndexRangeAccess;
     src: string;
     baseExpression: Record<string, unknown>;
     startExpression: Record<string, unknown>;
@@ -607,14 +666,14 @@ export interface IndexRangeAccessAstNode extends ExpressionAttributes {
 
 export interface ElementaryTypeNameExpressionAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'ElementaryTypeNameExpression';
+    nodeType: AstNodeType.ElementaryTypeNameExpression;
     src: string;
     typeName: ElementaryTypeNameAstNode;
 }
 
 export interface LiteralAstNode extends ExpressionAttributes {
     id: number;
-    nodeType: 'Literal';
+    nodeType: AstNodeType.Literal;
     src: string;
     kind: 'number' | 'string' | 'bool';
     value: string;
@@ -624,7 +683,7 @@ export interface LiteralAstNode extends ExpressionAttributes {
 
 export interface IdentifierAstNode {
     id: number;
-    nodeType: 'Identifier';
+    nodeType: AstNodeType.Identifier;
     src: string;
     name: string;
     referencedDeclaration: number;
@@ -635,7 +694,7 @@ export interface IdentifierAstNode {
 
 export interface StructuredDocumentationAstNode {
     id: number;
-    nodeType: 'StructuredDocumentation';
+    nodeType: AstNodeType.StructuredDocumentation;
     src: string;
     text: string;
 }
@@ -653,34 +712,34 @@ export interface CommonAstNode {
 
 export interface YulTypedNameAstNode {
     name: string;
-    nodeType: 'YulTypedName';
+    nodeType: AstNodeType.YulTypedName;
     src: string;
     type: string;
 }
 
 export interface YulIdentifierAstNode {
     name: string;
-    nodeType: 'YulIdentifier';
+    nodeType: AstNodeType.YulIdentifier;
     src: string;
 }
 
 export interface YulLiteralAstNode {
     kind: string;
-    nodeType: 'YulLiteral';
+    nodeType: AstNodeType.YulLiteral;
     src: string;
     type: string;
     value: string;
 }
 
 export interface YulVariableDeclarationAstNode {
-    nodeType: 'YulVariableDeclaration';
+    nodeType: AstNodeType.YulVariableDeclaration;
     src: string;
     value: YulIdentifierAstNode | YulLiteralAstNode;
     variables: Array<YulTypedNameAstNode>;
 }
 
 export interface YulBlockAstNode {
-    nodeType: 'YulBlock';
+    nodeType: AstNodeType.YulBlock;
     src: string;
     statements: Array<YulVariableDeclarationAstNode>;
 }

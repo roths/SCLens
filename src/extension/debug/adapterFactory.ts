@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { MockDebugSession } from '../mockDebug';
-import { workspaceFileAccessor } from '../utils/file';
+import { SolidityDebugSession } from './session';
 
 export class SolidityDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
 	public static readonly debugType = 'solidity';
@@ -11,7 +10,7 @@ export class SolidityDebugAdapterFactory implements vscode.DebugAdapterDescripto
 	}
 
 	public createDebugAdapterDescriptor(_session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-		return new vscode.DebugAdapterInlineImplementation(new MockDebugSession(this.context, workspaceFileAccessor));
+		return new vscode.DebugAdapterInlineImplementation(new SolidityDebugSession(this.context));
 	}
 
 	public static register(context: vscode.ExtensionContext) {
