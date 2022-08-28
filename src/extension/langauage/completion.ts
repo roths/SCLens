@@ -1,7 +1,7 @@
 import { AstNode, AstWalker } from '@remix-project/remix-astwalker';
 import * as vscode from 'vscode';
 import { SolcCompiler } from '../../common/solcCompiler';
-import { AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../../common/type';
+import { AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../../common/type';
 import { userContext } from '../../common/userContext';
 
 class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
@@ -47,19 +47,80 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             }
         });
         const completions: vscode.CompletionItem[] = [];
-        // return scope symbol completion
-        for (const scopeId of scopeChain) {
-            const astNodes = this.scopeNodeMap.get(scopeId);
-            if (!astNodes) {
-                continue;
+
+        const commitChar = document.getText(new vscode.Range(position.with({ character: position.character - 1 }), position));
+        if (commitChar === '.') {
+            // return field symbol completion,trigger by `.`
+            const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }));
+            if (wordRange) {
+                const word = document.getText(wordRange);
+                console.log('first word', word);
+                let match = false;
+                // find the first astNode name match with word in scope chain
+                for (const scopeId of scopeChain.reverse()) {
+                    const astNodes = this.scopeNodeMap.get(scopeId);
+                    if (!astNodes) {
+                        continue;
+                    }
+                    for (const astNode of astNodes) {
+                        if (astNode.name && astNode.name === word) {
+                            match = true;
+                            // find field
+                            console.log(astNode);
+                            if (astNode.nodeType === AstNodeType.VariableDeclaration) {
+                                const varDefNode = astNode as VariableDeclarationAstNode;
+                                if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
+                                    const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
+                                    const scopeItems = this.scopeNodeMap.get(type.referencedDeclaration)!;
+                                    for (const scopeItem of scopeItems) {
+                                        completions.push(...parseAstToCompletionItem(scopeItem));
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (!match) {
+                    // find the first astNode name match with word in global scope
+                    for (const astNodeId of this.globalNodeIds) {
+                        const astNode = this.astNodeMap.get(astNodeId);
+                        if (!astNode) {
+                            continue;
+                        }
+                        if (astNode.name && astNode.name === word) {
+                            match = true;
+                            // find field
+                            console.log(astNode);
+                            const scopeItems = this.scopeNodeMap.get(astNode.id)!;
+                            for (const scopeItem of scopeItems) {
+                                completions.push(...parseAstToCompletionItem(scopeItem));
+                            }
+                            break;
+                        }
+                    }
+                }
             }
-            for (const astNode of astNodes) {
-                completions.push(...parseAstToCompletionItem(astNode));
+        } else {
+            // return scope symbol completion
+            for (const scopeId of scopeChain) {
+                const astNodes = this.scopeNodeMap.get(scopeId);
+                if (!astNodes) {
+                    continue;
+                }
+                for (const astNode of astNodes) {
+                    // const [offset, len, fileId] = astNode.src.split(':').map(value => parseInt(value));
+                    // can not use a symbol defined after cursor in lowest scope
+                    // if (offset >= cursorOffset) {
+                    //     continue;
+                    // }
+                    completions.push(...parseAstToCompletionItem(astNode));
+                }
             }
-        }
-        // return global symbol completion
-        for (const astNodeId of this.globalNodeIds) {
-            completions.push(...parseAstToCompletionItem(this.astNodeMap.get(astNodeId)!));
+            // return global symbol completion
+            for (const astNodeId of this.globalNodeIds) {
+                completions.push(...parseAstToCompletionItem(this.astNodeMap.get(astNodeId)!));
+            }
         }
 
         return completions;
@@ -72,7 +133,14 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
         this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
         const result = await this.solc.analyseAst(document.fileName);
-        if (result.sources && Object.keys(result.sources).length > 0) {
+        const hasSource = result.sources && Object.keys(result.sources).length > 0;
+        let noFatalErr = true;
+        result.errors?.forEach(err => {
+            if (err.severity === 'error') {
+                noFatalErr = false;
+            }
+        });
+        if (noFatalErr && hasSource) {
             const fileMap = new Map<number, string>();
             for (const filePath in result.sources) {
                 fileMap.set(result.sources[filePath].id, filePath);
@@ -138,24 +206,20 @@ function parseAstToCompletionItem(node: AstNode) {
             const enumDefNode = node as EnumDefinitionAstNode;
             const item = new vscode.CompletionItem(enumDefNode.name, vscode.CompletionItemKind.Enum);
             completions.push(item);
-            // value
-            for (const enumValueNode of enumDefNode.members) {
-                const item = new vscode.CompletionItem(enumValueNode.name, vscode.CompletionItemKind.EnumMember);
-                item.commitCharacters = ['.'];
-                completions.push(item);
-            }
+        }
+            break;
+
+        case AstNodeType.EnumValue: {
+            const enumValueNode = node as EnumDefinitionAstNode;
+            const item = new vscode.CompletionItem(enumValueNode.name, vscode.CompletionItemKind.EnumMember);
+            item.commitCharacters = ['.'];
+            completions.push(item);
         }
             break;
         case AstNodeType.StructDefinition: {
             const structDefNode = node as StructDefinitionAstNode;
             const item = new vscode.CompletionItem(structDefNode.name, vscode.CompletionItemKind.Class);
             completions.push(item);
-            // value
-            for (const structValueNode of structDefNode.members) {
-                const item = new vscode.CompletionItem(structValueNode.name, vscode.CompletionItemKind.Variable);
-                item.commitCharacters = ['.'];
-                completions.push(item);
-            }
         }
             break;
 
