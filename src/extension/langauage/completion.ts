@@ -8,6 +8,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
     private astNodeMap = new Map<number, AstNode>();
     private scopeNodeMap = new Map<number, AstNode[]>();
+    private globalNodeIds = new Set<number>();
     private solc: SolcCompiler;
     private lastCompilationResult?: CompilationResult;
 
@@ -43,21 +44,25 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             }
             if (cursorOffset >= offset && cursorOffset <= offset + len) {
                 scopeChain.push(node.id);
-                console.log('find match scope item:', node);
             }
         });
-        const completionList: vscode.CompletionItem[] = [];
+        const completions: vscode.CompletionItem[] = [];
+        // return scope symbol completion
         for (const scopeId of scopeChain) {
-            const astNodeList = this.scopeNodeMap.get(scopeId);
-            if (!astNodeList) {
+            const astNodes = this.scopeNodeMap.get(scopeId);
+            if (!astNodes) {
                 continue;
             }
-            for (const astNode of astNodeList) {
-                completionList.push(...parseAstToCompletionItem(astNode));
+            for (const astNode of astNodes) {
+                completions.push(...parseAstToCompletionItem(astNode));
             }
         }
-        // return all completion items as array
-        return completionList;
+        // return global symbol completion
+        for (const astNodeId of this.globalNodeIds) {
+            completions.push(...parseAstToCompletionItem(this.astNodeMap.get(astNodeId)!));
+        }
+
+        return completions;
     }
 
     public async onEditorChange(document: vscode.TextDocument | undefined) {
@@ -75,23 +80,32 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
             const tmpScopeNodeMap = new Map<number, AstNode[]>();
             const tmpAstNodeMap = new Map<number, AstNode>();
+            const tmpGlobalNodeIds = new Set<number>();
             for (const filePath in result.sources) {
                 new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
                     const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
                     if (!fileMap.has(fileId)) {
                         return;
                     }
-
+                    // find all scope
                     if (node.scope) {
                         if (!tmpScopeNodeMap.has(node.scope)) {
                             tmpScopeNodeMap.set(node.scope, []);
                         }
                         tmpScopeNodeMap.get(node.scope)!.push(node);
                     }
+                    // save all ast node
                     tmpAstNodeMap.set(node.id, node);
+                    // find global symbol
+                    if (node.exportedSymbols) {
+                        for (const symbolName of Object.keys(node.exportedSymbols)) {
+                            tmpGlobalNodeIds.add((node.exportedSymbols[symbolName] as any)[0]);
+                        }
+                    }
                 });
             }
             // save context
+            this.globalNodeIds = tmpGlobalNodeIds;
             this.scopeNodeMap = tmpScopeNodeMap;
             this.astNodeMap = tmpAstNodeMap;
             this.lastCompilationResult = result;
@@ -101,46 +115,46 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 }
 
 function parseAstToCompletionItem(node: AstNode) {
-    const completionList: vscode.CompletionItem[] = [];
+    const completions: vscode.CompletionItem[] = [];
     switch (node.nodeType) {
         case AstNodeType.ContractDefinition: {
             const contractDefNode = node as ContractDefinitionAstNode;
-            completionList.push(new vscode.CompletionItem(contractDefNode.name, vscode.CompletionItemKind.Class));
+            completions.push(new vscode.CompletionItem(contractDefNode.name, vscode.CompletionItemKind.Class));
         }
             break;
         case AstNodeType.FunctionDefinition: {
             const funcDefNode = node as FunctionDefinitionAstNode;
             const item = new vscode.CompletionItem(funcDefNode.name, vscode.CompletionItemKind.Method);
-            completionList.push(item);
+            completions.push(item);
         }
             break;
         case AstNodeType.VariableDeclaration: {
             const varDefNode = node as VariableDeclarationAstNode;
             const item = new vscode.CompletionItem(varDefNode.name, vscode.CompletionItemKind.Variable);
-            completionList.push(item);
+            completions.push(item);
         }
             break;
         case AstNodeType.EnumDefinition: {
             const enumDefNode = node as EnumDefinitionAstNode;
             const item = new vscode.CompletionItem(enumDefNode.name, vscode.CompletionItemKind.Enum);
-            completionList.push(item);
+            completions.push(item);
             // value
             for (const enumValueNode of enumDefNode.members) {
                 const item = new vscode.CompletionItem(enumValueNode.name, vscode.CompletionItemKind.EnumMember);
                 item.commitCharacters = ['.'];
-                completionList.push(item);
+                completions.push(item);
             }
         }
             break;
         case AstNodeType.StructDefinition: {
             const structDefNode = node as StructDefinitionAstNode;
             const item = new vscode.CompletionItem(structDefNode.name, vscode.CompletionItemKind.Class);
-            completionList.push(item);
+            completions.push(item);
             // value
             for (const structValueNode of structDefNode.members) {
                 const item = new vscode.CompletionItem(structValueNode.name, vscode.CompletionItemKind.Variable);
                 item.commitCharacters = ['.'];
-                completionList.push(item);
+                completions.push(item);
             }
         }
             break;
@@ -148,7 +162,7 @@ function parseAstToCompletionItem(node: AstNode) {
         default:
         // console.log('not handler nodeType', node.nodeType);
     }
-    return completionList;
+    return completions;
 }
 
 export function activate(context: vscode.ExtensionContext) {
