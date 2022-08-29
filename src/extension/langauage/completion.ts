@@ -31,77 +31,49 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         if (!this.lastCompilationResult) {
             return [];
         }
+
         const cursorOffset = document.offsetAt(position);
         const fileMap = new Map<number, string>();
         for (const filePath in this.lastCompilationResult.sources) {
             fileMap.set(this.lastCompilationResult.sources[filePath].id, filePath);
         }
-        const scopeChain: number[] = [];
-        new AstWalker().walkFull(this.lastCompilationResult.sources![document.fileName].ast, (node: AstNode) => {
-            const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
-            if (!fileMap.has(fileId)) {
-                return;
-            }
-            if (cursorOffset >= offset && cursorOffset <= offset + len) {
-                scopeChain.push(node.id);
-            }
-        });
+        const scopeChain = getScopeChain(cursorOffset, this.lastCompilationResult.sources![document.fileName].ast, fileMap);
+
         const completions: vscode.CompletionItem[] = [];
 
         const commitChar = document.getText(new vscode.Range(position.with({ character: position.character - 1 }), position));
         if (commitChar === '.') {
             // return field symbol completion,trigger by `.`
-            const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }));
-            if (wordRange) {
-                const word = document.getText(wordRange);
-                console.log('first word', word);
-                let match = false;
-                // find the first astNode name match with word in scope chain
-                for (const scopeId of scopeChain.reverse()) {
-                    const astNodes = this.scopeNodeMap.get(scopeId);
-                    if (!astNodes) {
-                        continue;
-                    }
-                    for (const astNode of astNodes) {
-                        if (astNode.name && astNode.name === word) {
-                            match = true;
-                            // find field
-                            console.log(astNode);
-                            if (astNode.nodeType === AstNodeType.VariableDeclaration) {
-                                const varDefNode = astNode as VariableDeclarationAstNode;
-                                if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
-                                    const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
-                                    const scopeItems = this.scopeNodeMap.get(type.referencedDeclaration)!;
-                                    for (const scopeItem of scopeItems) {
-                                        completions.push(...parseAstToCompletionItem(scopeItem));
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-                if (!match) {
-                    // find the first astNode name match with word in global scope
-                    for (const astNodeId of this.globalNodeIds) {
-                        const astNode = this.astNodeMap.get(astNodeId);
-                        if (!astNode) {
-                            continue;
-                        }
-                        if (astNode.name && astNode.name === word) {
-                            match = true;
-                            // find field
-                            console.log(astNode);
-                            const scopeItems = this.scopeNodeMap.get(astNode.id)!;
-                            for (const scopeItem of scopeItems) {
-                                completions.push(...parseAstToCompletionItem(scopeItem));
-                            }
-                            break;
-                        }
+            const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }), /[a-zA-Z_. \n]+/);
+            if (!wordRange) {
+                return completions;
+            }
+            const wordStr = document.getText(wordRange).replace(/[ \n]/g, '');
+            console.log('completion trigger word', wordStr);
+            const callChain = wordStr.split('.').filter(value => value !== '');
+            // find scope symbol
+            let targetAstNode: AstNode | undefined = this.findAstNodeFromScope(callChain[0], scopeChain);
+            if (targetAstNode) {
+                // find field symbol
+                for (const fieldName of callChain.slice(1)) {
+                    targetAstNode = this.findAstNodeFromChild(targetAstNode!, fieldName);
+                    if (!targetAstNode) {
+                        break;
                     }
                 }
             }
+            if (!targetAstNode) {
+                console.error("can not find completion astNode", wordStr);
+                return completions;
+            }
+
+            const children = new AstWalker().getASTNodeChildren(targetAstNode);
+            for (const child of children) {
+                completions.push(...parseAstToCompletionItem(child));
+            }
+
         } else {
+            const completionNodeIdSet = new Set<number>();
             // return scope symbol completion
             for (const scopeId of scopeChain) {
                 const astNodes = this.scopeNodeMap.get(scopeId);
@@ -114,11 +86,16 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
                     // if (offset >= cursorOffset) {
                     //     continue;
                     // }
+                    completionNodeIdSet.add(astNode.id);
                     completions.push(...parseAstToCompletionItem(astNode));
                 }
             }
             // return global symbol completion
             for (const astNodeId of this.globalNodeIds) {
+                if (completionNodeIdSet.has(astNodeId)) {
+                    continue;
+                }
+                completionNodeIdSet.add(astNodeId);
                 completions.push(...parseAstToCompletionItem(this.astNodeMap.get(astNodeId)!));
             }
         }
@@ -180,6 +157,93 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         }
     }
 
+    private findAstNodeFromChild(parent: AstNode, fieldName: string) {
+        let result: AstNode | undefined;
+        const children = new AstWalker().getASTNodeChildren(parent);
+        for (const child of children) {
+            if (!child.name || child.name !== fieldName) {
+                continue;
+            }
+
+            // unwrap var decalration
+            if (child.nodeType === AstNodeType.VariableDeclaration) {
+                const varDefNode = result as VariableDeclarationAstNode;
+                if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
+                    const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
+                    result = this.astNodeMap.get(type.referencedDeclaration)!;
+                } else {
+                    result = varDefNode.typeName;
+                }
+            } else {
+                result = child;
+            }
+            break;
+        }
+        return result;
+    }
+
+    private findAstNodeFromScope(invoker: string, scopeChain: number[]) {
+        let result: AstNode | undefined;
+        for (const scopeId of scopeChain.reverse()) {
+            // find the first astNode name match with `invoker` in scope chain
+            const astNodes = this.scopeNodeMap.get(scopeId);
+            if (!astNodes) {
+                continue;
+            }
+            for (const astNode of astNodes) {
+                if (!astNode.name || astNode.name !== invoker) {
+                    continue;
+                }
+                // unwrap var decalration
+                if (astNode.nodeType === AstNodeType.VariableDeclaration) {
+                    const varDefNode = astNode as VariableDeclarationAstNode;
+                    if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
+                        const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
+                        result = this.astNodeMap.get(type.referencedDeclaration)!;
+                    } else {
+                        result = varDefNode.typeName;
+                    }
+                } else {
+                    result = astNode;
+                }
+                break;
+            }
+        }
+
+        if (result) {
+            return result;
+        }
+
+        // find the first astNode name match with word in global scope
+        for (const astNodeId of this.globalNodeIds) {
+            const astNode = this.astNodeMap.get(astNodeId);
+            if (!astNode) {
+                continue;
+            }
+            if (astNode.name && astNode.name === invoker) {
+                // find field
+                result = astNode;
+                break;
+            }
+        }
+        return result;
+    }
+
+}
+
+
+function getScopeChain(cursorOffset: number, astTree: AstNode, validFileMap: Map<number, string>) {
+    const scopeChain: number[] = [];
+    new AstWalker().walkFull(astTree, (node: AstNode) => {
+        const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
+        if (!validFileMap.has(fileId)) {
+            return;
+        }
+        if (cursorOffset >= offset && cursorOffset <= offset + len) {
+            scopeChain.push(node.id);
+        }
+    });
+    return scopeChain;
 }
 
 function parseAstToCompletionItem(node: AstNode) {
