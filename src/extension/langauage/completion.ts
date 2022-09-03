@@ -1,7 +1,7 @@
 import { AstNode, AstWalker } from '@remix-project/remix-astwalker';
 import * as vscode from 'vscode';
 import { SolcCompiler } from '../../common/solcCompiler';
-import { AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../../common/type';
+import { instanceField, definitionField, AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../../common/type';
 import { userContext } from '../../common/userContext';
 
 class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
@@ -32,6 +32,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             return [];
         }
 
+        // sdfsdf 1. 自动补全区分变量实例和类型定义
         const cursorOffset = document.offsetAt(position);
         const fileMap = new Map<number, string>();
         for (const filePath in this.lastCompilationResult.sources) {
@@ -44,7 +45,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         const commitChar = document.getText(new vscode.Range(position.with({ character: position.character - 1 }), position));
         if (commitChar === '.') {
             // return field symbol completion,trigger by `.`
-            const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }), /[a-zA-Z_. \n]+/);
+            const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }), /[a-zA-Z_0-9. \n]+/);
             if (!wordRange) {
                 return completions;
             }
@@ -52,11 +53,11 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             console.log('completion trigger word', wordStr);
             const callChain = wordStr.split('.').filter(value => value !== '');
             // find scope symbol
-            let targetAstNode: AstNode | undefined = this.findAstNodeFromScope(callChain[0], scopeChain);
+            let [targetAstNode, isInstance] = this.findAstNodeFromScope(callChain[0], scopeChain);
             if (targetAstNode) {
                 // find field symbol
                 for (const fieldName of callChain.slice(1)) {
-                    targetAstNode = this.findAstNodeFromChild(targetAstNode!, fieldName);
+                    [targetAstNode, isInstance] = this.findAstNodeFromChild(targetAstNode!, fieldName);
                     if (!targetAstNode) {
                         break;
                     }
@@ -69,6 +70,10 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
             const children = new AstWalker().getASTNodeChildren(targetAstNode);
             for (const child of children) {
+                const filter = this.filterByInstance(isInstance, child);
+                if (filter) {
+                    continue;
+                }
                 completions.push(...parseAstToCompletionItem(child));
             }
 
@@ -157,8 +162,25 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         }
     }
 
-    private findAstNodeFromChild(parent: AstNode, fieldName: string) {
+    private filterByInstance(isInstance: boolean, childNode: AstNode): boolean {
+        let isFilter = false;
+        if (isInstance) {
+            if (instanceField.indexOf(childNode.nodeType as AstNodeType) === -1) {
+                isFilter = true;
+                console.log('target node is instance, filter', childNode);
+            }
+        } else {
+            if (definitionField.indexOf(childNode.nodeType as AstNodeType) === -1) {
+                isFilter = true;
+                console.log('target node is class, filter', childNode);
+            }
+        }
+        return isFilter;
+    }
+
+    private findAstNodeFromChild(parent: AstNode, fieldName: string): [AstNode | undefined, boolean] {
         let result: AstNode | undefined;
+        let isInstance = false;
         const children = new AstWalker().getASTNodeChildren(parent);
         for (const child of children) {
             if (!child.name || child.name !== fieldName) {
@@ -167,6 +189,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
             // unwrap var decalration
             if (child.nodeType === AstNodeType.VariableDeclaration) {
+                isInstance = true;
                 const varDefNode = result as VariableDeclarationAstNode;
                 if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
                     const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
@@ -179,11 +202,12 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             }
             break;
         }
-        return result;
+        return [result, isInstance];
     }
 
-    private findAstNodeFromScope(invoker: string, scopeChain: number[]) {
+    private findAstNodeFromScope(invoker: string, scopeChain: number[]): [AstNode | undefined, boolean] {
         let result: AstNode | undefined;
+        let isInstance = false;
         for (const scopeId of scopeChain.reverse()) {
             // find the first astNode name match with `invoker` in scope chain
             const astNodes = this.scopeNodeMap.get(scopeId);
@@ -196,6 +220,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
                 }
                 // unwrap var decalration
                 if (astNode.nodeType === AstNodeType.VariableDeclaration) {
+                    isInstance = true;
                     const varDefNode = astNode as VariableDeclarationAstNode;
                     if (varDefNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
                         const type = (varDefNode.typeName as UserDefinedTypeNameAstNode);
@@ -211,7 +236,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         }
 
         if (result) {
-            return result;
+            return [result, isInstance];
         }
 
         // find the first astNode name match with word in global scope
@@ -226,7 +251,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
                 break;
             }
         }
-        return result;
+        return [result, isInstance];
     }
 
 }

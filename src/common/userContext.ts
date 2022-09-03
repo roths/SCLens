@@ -18,7 +18,7 @@ class UserContext {
     // 'https://ropsten.infura.io/v3/4c32d98b849c4310af378437be8128e5'
     // 'http://192.168.0.155:8545'
     public network: string = "https://remix-goerli.ethdevops.io";
-    public web3Type = Web3Type.Block;
+    public web3Type = Web3Type.VM;
 
     private _contractHistory: ContractHistory = {};
     public get contractHistory() {

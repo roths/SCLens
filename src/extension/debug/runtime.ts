@@ -203,7 +203,7 @@ export class SolidityRuntime extends EventEmitter {
 		// diagnostic, light and fast
 		this.compilationResult = await this.solc.diagnostic(contractPath);
 		console.info("use solidity compiler version:" + this.solc.usedCompilerVersion);
-		if (this.compilationResult.errors) {
+		if (this.compilationResult.errors && this.solc.hasFatal(this.compilationResult.errors)) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
 			this.sendEvent('end');
 			return;
@@ -211,7 +211,7 @@ export class SolidityRuntime extends EventEmitter {
 		// compile
 		console.info("compile *.sol file:" + contractPath);
 		this.compilationResult = await this.solc.compile(contractPath);
-		if (this.compilationResult.errors) {
+		if (this.compilationResult.errors && this.solc.hasFatal(this.compilationResult.errors)) {
 			vscode.window.showErrorMessage(this.compilationResult.errors.map((item) => item.formattedMessage).join());
 			this.sendEvent('end');
 			return;

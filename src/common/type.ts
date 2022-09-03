@@ -206,6 +206,10 @@ export enum AstNodeType {
     YulVariableDeclaration = 'YulVariableDeclaration',
     YulBlock = 'YulBlock'
 }
+
+export const instanceField = [AstNodeType.FunctionDefinition, AstNodeType.VariableDeclaration, AstNodeType.EventDefinition];
+export const definitionField = [AstNodeType.EnumValue, AstNodeType.EnumDefinition, AstNodeType.StructDefinition];
+
 export interface SourceUnitAstNode {
     id: number;
     nodeType: AstNodeType.SourceUnit;

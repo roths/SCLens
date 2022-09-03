@@ -81,6 +81,17 @@ export class SolcCompiler {
         return this.execSolc(sources, settings);
     }
 
+    public hasFatal(errors?: CompilationError[]) {
+        if (errors) {
+            for (const error of errors) {
+                if (error.severity === 'error') {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private async execSolc(sources: Source, settings: any): Promise<CompilationResult> {
         let compilerVersion: string | null = this.selectedCompilerVersion;
         if (compilerVersion === "Auto") {

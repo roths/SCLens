@@ -217,7 +217,7 @@ function struct(type: string, stateDefinitions: StatesDefinitions, contractName:
   */
 function getEnum(type: string, stateDefinitions: StatesDefinitions, contractName: string) {
   const split = type.split('.');
-  if (!split.length) {
+  if (split.length === 1) {
     type = contractName + '.' + type;
   } else {
     contractName = split[0];
@@ -245,8 +245,8 @@ function getEnum(type: string, stateDefinitions: StatesDefinitions, contractName
 function getStructMembers(type: string, stateDefinitions: StatesDefinitions, contractName: string, location: string) {
   if (type.indexOf('.') === -1) {
     type = contractName + '.' + type;
-  }
-  if (!contractName) {
+  } else {
+    // get actual contract
     contractName = type.split('.')[0];
   }
   const state = stateDefinitions[contractName];

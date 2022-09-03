@@ -65,7 +65,7 @@ export function toBN(value: any) {
   } else if (!isNaN(value)) {
     value = new BN(value);
   }
-  return null;
+  return value;
 }
 
 export function add(value1: any, value2: any) {
