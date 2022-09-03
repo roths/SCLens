@@ -42,16 +42,21 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
         const completions: vscode.CompletionItem[] = [];
 
-        const commitChar = document.getText(new vscode.Range(position.with({ character: position.character - 1 }), position));
-        if (commitChar === '.') {
+        const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }), /[a-zA-Z_0-9. \n]+/);
+        if (!wordRange) {
+            return completions;
+        }
+        const wordStr = document.getText(wordRange).replace(/[ \n]/g, '');
+        console.log('completion trigger word', wordStr);
+        if (wordStr.indexOf('.') !== -1) {
             // return field symbol completion,trigger by `.`
             const wordRange = document.getWordRangeAtPosition(position.with({ character: position.character - 1 }), /[a-zA-Z_0-9. \n]+/);
             if (!wordRange) {
                 return completions;
             }
             const wordStr = document.getText(wordRange).replace(/[ \n]/g, '');
-            console.log('completion trigger word', wordStr);
-            const callChain = wordStr.split('.').filter(value => value !== '');
+            // remove last one
+            const callChain = wordStr.split('.').slice(0, -1);
             // find scope symbol
             let [targetAstNode, isInstance] = this.findAstNodeFromScope(callChain[0], scopeChain);
             if (targetAstNode) {
