@@ -11,10 +11,11 @@ class UserStoryFlow {
         const abi = compiledContract.abi;
         const contract = new web3.eth.Contract(abi);
         const { accountAddress, pk } = userContext.getCurAccount();
+        const gas = Math.round(parseInt(compiledContract.evm.gasEstimates.creation.totalCost) * 1.5);
         const contractInstance = await contract.deploy({
             data: bytecode,
             arguments: [5],
-        }).send({ from: accountAddress, gas: 300000 });
+        }).send({ from: accountAddress, gas });
 
         console.log('Create contract instance:', contractInstance);
         return contractInstance.options.address ?? null;

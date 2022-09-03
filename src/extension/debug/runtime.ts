@@ -91,6 +91,17 @@ export class RuntimeVariable {
 	}
 }
 
+function createRuntimeVariable(name: string, value: any) {
+	let varValue = value;
+	if (value instanceof Object) {
+		varValue = [];
+		for (const key in value) {
+			varValue.push(createRuntimeVariable(key, value[key].value));
+		}
+	}
+	return new RuntimeVariable(name, varValue);
+}
+
 export function timeout(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -476,8 +487,7 @@ export class SolidityRuntime extends EventEmitter {
 	}
 
 	public async getGlobalVariables(cancellationToken?: () => boolean): Promise<RuntimeVariable[]> {
-
-		let a: RuntimeVariable[] = [];
+		const vscodeGlobalVar: RuntimeVariable[] = [];
 		const address = this.traceManager.getCurrentCalledAddressAt(this.vmTraceIndex)!;
 		const globalVar = await this.solidityProxy.extractStateVariablesAt(this.vmTraceIndex);
 		const viewer = new StorageViewer({ stepIndex: this.vmTraceIndex, tx: this.tx, address },
@@ -485,13 +495,13 @@ export class SolidityRuntime extends EventEmitter {
 		const globalVarDecoded = await stateDecoder.decodeState(globalVar, viewer);
 
 		for (const [varName, varData] of Object.entries(globalVarDecoded)) {
-			a.push(new RuntimeVariable(varName, varData.value));
+			vscodeGlobalVar.push(createRuntimeVariable(varName, varData.value));
 			if (cancellationToken && cancellationToken()) {
 				break;
 			}
 		}
 
-		return a;
+		return vscodeGlobalVar;
 	}
 
 	public async getLocalVariables(): Promise<RuntimeVariable[]> {
