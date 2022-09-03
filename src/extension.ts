@@ -5,8 +5,7 @@ import { userContext } from './common/userContext';
 import * as debugModule from './extension/debug';
 import * as lspModule from './extension/lsp';
 import * as uiModule from './extension/ui';
-import * as diagnostModule from './extension/langauage/diagnostics';
-import * as completionModule from './extension/langauage/completion';
+import * as langauageModule from './extension/langauage';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -18,8 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 	debugModule.activate(context);
 	uiModule.activate(context);
 	// lspModule.activate(context);
-	diagnostModule.activate(context);
-	completionModule.activate(context);
+	langauageModule.activate(context);
 	
 	console.log('ScLens extension active!');
 }
@@ -31,8 +29,7 @@ export function deactivate() {
 	debugModule.deactivate();
 	uiModule.deactivate();
 	lspModule.deactivate();
-	diagnostModule.deactivate();
-	completionModule.deactivate();
+	langauageModule.deactivate();
 
 	console.log('ScLens extension deactivate!');
 }

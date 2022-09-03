@@ -11,6 +11,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
     private globalNodeIds = new Set<number>();
     private solc: SolcCompiler;
     private lastCompilationResult?: CompilationResult;
+    private fileMap = new Map<number, string>();
 
     constructor(context: vscode.ExtensionContext) {
         this.solc = new SolcCompiler(context.extensionPath);
@@ -32,13 +33,8 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             return [];
         }
 
-        // sdfsdf 1. 自动补全区分变量实例和类型定义
         const cursorOffset = document.offsetAt(position);
-        const fileMap = new Map<number, string>();
-        for (const filePath in this.lastCompilationResult.sources) {
-            fileMap.set(this.lastCompilationResult.sources[filePath].id, filePath);
-        }
-        const scopeChain = getScopeChain(cursorOffset, this.lastCompilationResult.sources![document.fileName].ast, fileMap);
+        const scopeChain = getScopeChain(cursorOffset, this.lastCompilationResult.sources![document.fileName].ast, this.fileMap);
 
         const completions: vscode.CompletionItem[] = [];
 
@@ -121,16 +117,11 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
         const result = await this.solc.analyseAst(document.fileName);
         const hasSource = result.sources && Object.keys(result.sources).length > 0;
-        let noFatalErr = true;
-        result.errors?.forEach(err => {
-            if (err.severity === 'error') {
-                noFatalErr = false;
-            }
-        });
-        if (noFatalErr && hasSource) {
-            const fileMap = new Map<number, string>();
+        const hasFatal = this.solc.hasFatal(result.errors);
+        if (!hasFatal && hasSource) {
+            const tmpFileMap = new Map<number, string>();
             for (const filePath in result.sources) {
-                fileMap.set(result.sources[filePath].id, filePath);
+                tmpFileMap.set(result.sources[filePath].id, filePath);
             }
 
             const tmpScopeNodeMap = new Map<number, AstNode[]>();
@@ -139,7 +130,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             for (const filePath in result.sources) {
                 new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
                     const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
-                    if (!fileMap.has(fileId)) {
+                    if (!tmpFileMap.has(fileId)) {
                         return;
                     }
                     // find all scope
@@ -164,6 +155,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             this.scopeNodeMap = tmpScopeNodeMap;
             this.astNodeMap = tmpAstNodeMap;
             this.lastCompilationResult = result;
+            this.fileMap = tmpFileMap;
         }
     }
 
