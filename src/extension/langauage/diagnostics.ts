@@ -25,6 +25,9 @@ async function diagnostics(doc: vscode.TextDocument) {
 
             const lineOffset = getLineOffset(sourceText);
             const rangeObj = getSourceRange(lineOffset, item.sourceLocation!.start, item.sourceLocation.end);
+            if (item.sourceLocation.end === -1 || item.sourceLocation.start === -1) {
+                continue;
+            }
             const range = new vscode.Range(rangeObj.startLine, rangeObj.startColum, rangeObj.endLine, rangeObj.endColum);
 
             diagnosticMap[item.sourceLocation.file] = diagnosticMap[item.sourceLocation.file] || [];

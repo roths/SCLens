@@ -14,9 +14,13 @@ export function getLineOffset(source: string) {
 export function getSourceRange(lineOffset: number[], start: number, end: number) {
     const length = end - start;
     const startLine = util.findLowerBound(start, lineOffset);
-    const startColum = start - lineOffset[startLine] - 1;
+    let gap = 0;
+    if (startLine > 0) {
+        gap = 1;
+    }
+    const startColum = start - lineOffset[startLine] - gap;
     const endLine = util.findLowerBound(start + length - 1, lineOffset);
-    const endColum = start + length - lineOffset[endLine] - 1;
+    const endColum = start + length - lineOffset[endLine] - gap;
     return { startLine, startColum, endLine, endColum };
 }
 

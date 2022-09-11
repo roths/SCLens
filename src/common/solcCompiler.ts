@@ -62,6 +62,22 @@ export class SolcCompiler {
         return this.execSolc(sources, settings);
     }
 
+    public async analyseSourceAst(sources: Source) {
+        const settings = {
+            optimizer: {
+                enabled: false
+            },
+            outputSelection: {
+                '*': {
+                    '': ['ast'],
+                    '*': []
+                },
+            }
+        };
+
+        return this.execSolc(sources, settings);
+    }
+
     public async diagnostic(contractPath: string) {
         const settings = {
             optimizer: {
@@ -158,7 +174,7 @@ export class SolcCompiler {
         for (const key of Object.keys(sources)) {
             const match = sources[key].content.match(pragmaRegx);
             if (match) {
-                const semverMatch = match[0].match(/[>=<]*[ ]*([0-9]+.[0-9]+.[0-9]+)/g);
+                const semverMatch = match[0].match(/[>=<^]*[ ]*([0-9]+.[0-9]+.[0-9]+)/g);
                 if (semverMatch) {
                     for (let index = 0; index < semverMatch.length; index++) {
                         semverList.push(semverMatch[index].replace(/ /g, ''));
@@ -168,6 +184,9 @@ export class SolcCompiler {
         }
         // fetch candidate version list
         const solcVersionMap = await solcHttpClient.fetchVersions();
+        if (semverList.length === 0) {
+            return Object.keys(solcVersionMap)[0];
+        }
         // find a match one
         const matchKey = semver.maxSatisfying(Object.keys(solcVersionMap), semverList.join(' '));
         return matchKey;
