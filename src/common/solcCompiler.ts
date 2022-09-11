@@ -108,6 +108,17 @@ export class SolcCompiler {
         return false;
     }
 
+    public getFatal(errors?: CompilationError[]) {
+        if (errors) {
+            for (const error of errors) {
+                if (error.severity === 'error') {
+                    return error;
+                }
+            }
+        }
+        return undefined;
+    }
+
     private async execSolc(sources: Source, settings: any): Promise<CompilationResult> {
         let compilerVersion: string | null = this.selectedCompilerVersion;
         if (compilerVersion === "Auto") {
@@ -157,7 +168,7 @@ export class SolcCompiler {
                 if (failureImport.length === 0) {
                     return this.execSolc(sources, settings);
                 } else {
-                    return { errors: [{ formattedMessage: 'Fail to resolve import:\n' + JSON.stringify(failureImport), severity: 'error', mode: 'panic' }] };
+                    return { errors: result.errors };
                 }
             }
         } catch (exception) {
