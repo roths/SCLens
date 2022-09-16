@@ -1,5 +1,5 @@
 'use strict';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import { isContractCreation } from '../trace/traceHelper';
 import { extractStateVariables } from './stateDecoder';
 import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitions, StatesDefinitions } from './astHelper';

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { SolcCompiler } from '../../common/solcCompiler';
 import { userContext } from '../../common/userContext';
-import { AstNode, AstWalker } from '@remix-project/remix-astwalker';
-import { AstNodeType, CompilationResult, UserDefinedTypeNameAstNode, VariableDeclarationAstNode } from '../../common/type';
+import { AstNode, AstNodeType, CompilationResult, UserDefinedTypeNameAstNode, VariableDeclarationAstNode } from '../../common/type';
+import { AstWalker } from '../../common/astWalker';
 
 class SolidityDefinitionProvider implements vscode.DefinitionProvider {
 

@@ -121,7 +121,7 @@ export class TraceAnalyser {
 
   private static buildDepth(index: number, step: StructLog, tx: Transaction, callStack: string[], context: TraceContext, traceCache: TraceCache, trace: StructLog[]) {
     if (traceHelper.isCallInstruction(step) && !traceHelper.isCallToPrecompiledContract(index, trace)) {
-      let newAddress: string | null;
+      let newAddress: string | null | undefined;
       if (traceHelper.isCreateInstruction(step)) {
         newAddress = traceHelper.contractCreationToken(index);
         callStack.push(newAddress);
@@ -135,7 +135,7 @@ export class TraceAnalyser {
           console.error('unable to build depth changes. ' + index + ' does not match with a CALL. depth changes will be corrupted');
         }
       }
-      traceCache.pushCall(step, index + 1, newAddress, callStack.slice(0));
+      traceCache.pushCall(step, index + 1, newAddress!, callStack.slice(0));
       this.buildCalldata(index, tx, true, traceCache, trace);
       traceCache.pushSteps(index, context.currentCallIndex);
       context.lastCallIndex = context.currentCallIndex;

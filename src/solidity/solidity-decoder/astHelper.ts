@@ -1,5 +1,5 @@
 'use strict';
-import { AstWalker } from '@remix-project/remix-astwalker';
+import { AstWalker } from '../../common/astWalker';
 import { ComplitionSources, AstNode } from '../../common/type';
 
 export interface ContractDefinitions {

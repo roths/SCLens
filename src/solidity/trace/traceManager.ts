@@ -1,5 +1,5 @@
 'use strict';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import { TraceAnalyser } from './traceAnalyser';
 import { Call, TraceCache } from './traceCache';
 import * as traceHelper from './traceHelper';
@@ -38,10 +38,7 @@ export class TraceManager {
 
   async buildCallPath(vmTraceIndex: number) {
     this.checkRequestedStep(vmTraceIndex);
-    const callsPath = util.buildCallPath(vmTraceIndex, this.traceCache.callsTree?.call);
-    if (callsPath === null) {
-      throw new Error('no call path built');
-    }
+    const callsPath = util.buildCallPath(vmTraceIndex, this.traceCache.callsTree!.call);
     return callsPath;
   }
 
@@ -77,10 +74,7 @@ export class TraceManager {
 
   getCallStackAt(vmTraceIndex: number) {
     this.checkRequestedStep(vmTraceIndex);
-    const call = util.findCall(vmTraceIndex, this.traceCache.callsTree?.call);
-    if (call === null) {
-      throw new Error('no callstack found');
-    }
+    const call = util.findCall(vmTraceIndex, this.traceCache.callsTree!.call);
     return call.callStack;
   }
 
@@ -154,7 +148,7 @@ export class TraceManager {
     const state = this.trace[currentStep];
     if (traceHelper.isCallInstruction(state) && !traceHelper.isCallToPrecompiledContract(currentStep, this.trace)) {
       const call = util.findCall(currentStep + 1, this.traceCache.callsTree!.call);
-      return call.return + 1 < this.trace.length ? call.return + 1 : this.trace.length - 1;
+      return call.return! + 1 < this.trace.length ? call.return! + 1 : this.trace.length - 1;
     }
     return this.trace.length >= currentStep + 1 ? currentStep + 1 : currentStep;
   }
@@ -163,7 +157,7 @@ export class TraceManager {
     const call = util.findCall(currentStep, this.traceCache.callsTree!.call);
     const subCalls = Object.keys(call.calls);
     if (subCalls.length) {
-      const callStart = util.findLowerBound(currentStep, subCalls) + 1;
+      const callStart = util.findLowerBound(currentStep, subCalls.map(Number)) + 1;
       if (subCalls.length > callStart) {
         return parseInt(subCalls[callStart]) - 1;
       }

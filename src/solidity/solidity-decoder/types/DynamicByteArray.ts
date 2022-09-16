@@ -1,6 +1,6 @@
 'use strict';
 import { extractHexValue, readFromStorage } from './util';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../../common/utils';
 import { BN } from 'ethereumjs-util';
 import { RefType } from './RefType';
 import { Storagelocation } from '../decodeInfo';
@@ -16,7 +16,7 @@ export class DynamicByteArray extends RefType {
     let value = '0x0';
     try {
       value = await extractHexValue(location, storageViewer, this.storageBytes);
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       return { error: '<decoding failed - ' + e.message + '>', type: this.typeName };
     }
@@ -27,7 +27,7 @@ export class DynamicByteArray extends RefType {
       let currentSlot = '0x';
       try {
         currentSlot = await readFromStorage(dataPos.toBuffer(), storageViewer);
-      } catch (e) {
+      } catch (e: any) {
         console.log(e);
         return { error: '<decoding failed - ' + e.message + '>', type: this.typeName };
       }

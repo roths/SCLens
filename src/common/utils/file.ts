@@ -1,4 +1,4 @@
-import { util } from "@remix-project/remix-lib";
+import { findLowerBound } from "./sort";
 import * as vscode from 'vscode';
 import path from "path";
 
@@ -13,13 +13,13 @@ export function getLineOffset(source: string) {
 
 export function getSourceRange(lineOffset: number[], start: number, end: number) {
     const length = end - start;
-    const startLine = util.findLowerBound(start, lineOffset);
+    const startLine = findLowerBound(start, lineOffset);
     let gap = 0;
     if (startLine > 0) {
         gap = 1;
     }
     const startColum = start - lineOffset[startLine] - gap;
-    const endLine = util.findLowerBound(start + length - 1, lineOffset);
+    const endLine = findLowerBound(start + length - 1, lineOffset);
     const endColum = start + length - lineOffset[endLine] - gap;
     return { startLine, startColum, endLine, endColum };
 }

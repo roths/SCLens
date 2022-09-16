@@ -1,5 +1,5 @@
 
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import Web3 from 'web3';
 import { CompiledContractObj, GeneratedSource } from '../../common/type';
 import { isContractCreation } from '../trace/traceHelper';

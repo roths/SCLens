@@ -8,3 +8,6 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+cache
+# Not needed at present
+webview-ui

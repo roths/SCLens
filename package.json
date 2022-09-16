@@ -1,8 +1,8 @@
 {
-  "name": "helloworld",
-  "displayName": "HelloWorld",
-  "description": "LEAVE BLANK",
-  "version": "0.0.1",
+  "name": "SCLens",
+  "displayName": "SCLens",
+  "description": "SCLens is vscode extension to help more people interested in web3 create their first smart contract faster and easier.",
+  "version": "0.0.1-beta",
   "engines": {
     "vscode": "^1.68.0"
   },
@@ -309,38 +309,42 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.7",
     "@types/glob": "^7.2.0",
+    "@types/lru-cache": "^7.10.10",
     "@types/mocha": "^9.1.1",
     "@types/node": "16.x",
+    "@types/node-fetch": "^2.6.2",
     "@types/path-browserify": "^1.0.0",
     "@types/semver": "^7.3.10",
+    "@types/string-similarity": "^4.0.0",
     "@types/vscode": "^1.68.0",
     "@typescript-eslint/eslint-plugin": "^4.14.1",
     "@typescript-eslint/parser": "^4.14.1",
-    "@vscode/debugadapter": "^1.56.0",
     "@vscode/test-electron": "^2.1.5",
     "eslint": "^7.19.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
-    "path-browserify": "^1.0.1",
     "typescript": "^4.7.4"
   },
   "dependencies": {
     "@erebos/bzz-node": "^0.13.0",
     "@ethereumjs/tx": "^3.5.2",
-    "@remix-project/remix-astwalker": "^0.0.44",
-    "@remix-project/remix-debug": "^0.5.14",
-    "@remix-project/remix-lib": "^0.5.14",
-    "@remix-project/remix-simulator": "^0.2.16-alpha.0",
+    "@remix-project/remix-simulator": "^0.2.16",
     "await-notify": "^1.0.1",
     "axios": "^0.27.2",
     "ethereumjs-util": "^7.1.5",
+    "ethers": "^5.7.0",
+    "lru-cache": "^7.14.0",
     "semver": "^7.3.7",
     "solc": "^0.8.15",
     "string-similarity": "^4.0.4",
+    "tslib": "^2.4.0",
     "vscode-languageclient": "^8.0.1",
     "vscode-languageserver": "^8.0.1",
     "vscode-languageserver-textdocument": "^1.0.5",
+    "@vscode/debugadapter": "^1.56.0",
+    "path-browserify": "^1.0.1",
     "web3": "^1.7.4"
   }
 }

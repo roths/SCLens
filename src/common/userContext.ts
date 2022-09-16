@@ -4,7 +4,8 @@ import path from "path";
 import vscode from "vscode";
 import fs from 'fs';
 import Web3 from "web3";
-import { extend, Provider } from "@remix-project/remix-simulator";
+import { extend } from '../solidity/init';
+import { extend as extendSimulator, Provider } from "@remix-project/remix-simulator";
 import { getText, writeText } from "./utils/file";
 
 enum Web3Type {
@@ -48,7 +49,7 @@ class UserContext {
             const remixSimulatorProvider = new Provider({ fork: 'london' });
             remixSimulatorProvider.init();
             web3 = new Web3(remixSimulatorProvider);
-            extend(web3);
+            extendSimulator(web3);
 
             remixSimulatorProvider.Accounts._addAccount('503f38a9c967ed597e47fe25643985f032b072db8075426a92110f82df48dfcb', '0x56BC75E2D63100000');
             remixSimulatorProvider.Accounts._addAccount('7e5bfb82febc4c2c8529167104271ceec190eafdca277314912eaabdb67c6e5f', '0x56BC75E2D63100000');
@@ -58,6 +59,7 @@ class UserContext {
             remixSimulatorProvider.Accounts._addAccount('adeee250542d3790253046eee928d8058fd544294a5219bea152d1badbada395', '0x56BC75E2D63100000');
         } else {
             web3 = new Web3(userContext.network);
+            extend(web3);
             web3.eth.accounts.wallet.add('f7ad2ba6fd69c9ee0ce6119a3fd563f0ce6a58901f8265faa1bed3362ac919c2');
             web3.eth.accounts.wallet.add('2f4e33cb48b192c96ada5c190d760bebb1950a9bcb436c42ae4413c077cae48c');
         }

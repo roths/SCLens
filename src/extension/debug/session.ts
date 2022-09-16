@@ -20,7 +20,7 @@ import {
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { basename } from 'path-browserify';
 import { SolidityRuntime, IRuntimeBreakpoint, RuntimeVariable, timeout, IRuntimeVariableType } from './runtime';
-import { Subject } from 'await-notify';
+const { Subject } = require('await-notify');
 import * as base64 from 'base64-js';
 import * as vscode from 'vscode';
 
@@ -237,7 +237,7 @@ export class SolidityDebugSession extends LoggingDebugSession {
 		this._configurationDone.notify();
 	}
 
-	protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
+	protected async disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): Promise<void> {
 		console.log(`disconnectRequest suspend: ${args.suspendDebuggee}, terminate: ${args.terminateDebuggee}`);
 		await this._runtime.end();
 	}

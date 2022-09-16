@@ -25,7 +25,7 @@ export abstract class ValueType {
     try {
       const value = await extractHexValue(location, storageViewer, this.storageBytes);
       return { value: this.decodeValue(value), type: this.typeName };
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       return { error: '<decoding failed - ' + e.message + '>', type: this.typeName };
     }

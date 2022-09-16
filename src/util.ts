@@ -1,28 +1,29 @@
-'use strict'
-import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util'
+'use strict';
+import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util';
+import { VariableDeclarationAstNode } from './common/type';
 import { StorageViewer } from './solidity/storage/storageViewer';
 
-export function decodeIntFromHex (value, byteLength, signed) {
-  let bigNumber = new BN(value, 16)
+export function decodeIntFromHex(value: any, byteLength: number, signed: boolean) {
+  let bigNumber = new BN(value, 16);
   if (signed) {
-    bigNumber = bigNumber.fromTwos(8 * byteLength)
+    bigNumber = bigNumber.fromTwos(8 * byteLength);
   }
-  return bigNumber.toString(10)
+  return bigNumber.toString(10);
 }
 
-export function readFromStorage (slot, storageViewer: StorageViewer): Promise<string> {
-  const hexSlot = '0x' + normalizeHex(bufferToHex(slot))
+export function readFromStorage(slot: any, storageViewer: StorageViewer): Promise<string> {
+  const hexSlot = '0x' + normalizeHex(bufferToHex(slot));
   return new Promise((resolve, reject) => {
-    storageViewer.storageSlot(hexSlot, (error, slot) => {
+    storageViewer.storageSlot(hexSlot, (error: any, slot: any) => {
       if (error) {
-        return reject(error)
+        return reject(error);
       }
       if (!slot) {
-        slot = { key: slot, value: '' }
+        slot = { key: slot, value: '' };
       }
-      return resolve(normalizeHex(slot.value))
-    })
-  })
+      return resolve(normalizeHex(slot.value));
+    });
+  });
 }
 
 /**
@@ -32,9 +33,9 @@ export function readFromStorage (slot, storageViewer: StorageViewer): Promise<st
  * @param {Int} byteLength  - Length of the byte slice to extract
  * @param {Int} offsetFromLSB  - byte distance from the right end slot value to the right end of the byte slice
  */
-export function extractHexByteSlice (slotValue, byteLength: number, offsetFromLSB) {
-  const offset = slotValue.length - 2 * offsetFromLSB - 2 * byteLength
-  return slotValue.substr(offset, 2 * byteLength)
+export function extractHexByteSlice(slotValue: string, byteLength: number, offsetFromLSB: number) {
+  const offset = slotValue.length - 2 * offsetFromLSB - 2 * byteLength;
+  return slotValue.substr(offset, 2 * byteLength);
 }
 
 /**
@@ -44,61 +45,64 @@ export function extractHexByteSlice (slotValue, byteLength: number, offsetFromLS
  * @param {Object} storageResolver  - storage resolver
  * @param {Int} byteLength  - Length of the byte slice to extract
  */
-export async function extractHexValue (location, storageViewer: StorageViewer, byteLength) {
-  let slotvalue
+export async function extractHexValue(location: any, storageViewer: StorageViewer, byteLength: number) {
+  let slotvalue;
   try {
-    slotvalue = await readFromStorage(location.slot, storageViewer)
+    slotvalue = await readFromStorage(location.slot, storageViewer);
   } catch (e) {
-    return ''
+    return '';
   }
-  return extractHexByteSlice(slotvalue, byteLength, location.offset)
+  return extractHexByteSlice(slotvalue, byteLength, location.offset);
 }
 
-export function toBN (value) {
+export function toBN(value: any) {
   if (value instanceof BN) {
-    return value
+    return value;
   } else if (value.match && value.match(/^(0x)?([a-f0-9]*)$/)) {
-    value = unpadHexString(value)
-    value = new BN(value === '' ? '0' : value, 16)
+    value = unpadHexString(value);
+    value = new BN(value === '' ? '0' : value, 16);
   } else if (!isNaN(value)) {
-    value = new BN(value)
+    value = new BN(value);
   }
-  return value
+  return value;
 }
 
-export function add (value1, value2) {
-  return toBN(value1).add(toBN(value2))
+export function add(value1: any, value2: any) {
+  return toBN(value1).add(toBN(value2));
 }
 
-export function sub (value1, value2) {
-  return toBN(value1).sub(toBN(value2))
+export function sub(value1: any, value2: any) {
+  return toBN(value1).sub(toBN(value2));
 }
 
-export function removeLocation (type) {
-  return type.replace(/( storage ref| storage pointer| memory| calldata)/g, '')
+export function removeLocation(type: string) {
+  return type.replace(/( storage ref| storage pointer| memory| calldata)/g, '');
 }
 
-export function extractLocation (type) {
-  const match = type.match(/( storage ref| storage pointer| memory| calldata)?$/)
+export function extractLocation(type: string) {
+  const match = type.match(/( storage ref| storage pointer| memory| calldata)?$/);
+  if (!match) {
+    return null;
+  }
   if (match[1] !== '') {
-    return match[1].trim()
+    return match[1].trim();
   }
-  return null
+  return null;
 }
 
-export function extractLocationFromAstVariable (node) {
+export function extractLocationFromAstVariable(node: VariableDeclarationAstNode) {
   if (node.storageLocation !== 'default') {
-    return node.storageLocation
+    return node.storageLocation;
   } else if (node.stateVariable) {
-    return 'storage'
+    return 'storage';
   }
-  return 'default' // local variables => storage, function parameters & return values => memory, state => storage
+  return 'default'; // local variables => storage, function parameters & return values => memory, state => storage
 }
 
-export function normalizeHex (hex): string {
-  hex = hex.replace('0x', '')
+export function normalizeHex(hex: string): string {
+  hex = hex.replace('0x', '');
   if (hex.length < 64) {
-    return (new Array(64 - hex.length + 1).join('0')) + hex
+    return (new Array(64 - hex.length + 1).join('0')) + hex;
   }
-  return hex
+  return hex;
 }

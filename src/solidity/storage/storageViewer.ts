@@ -1,5 +1,5 @@
 'use strict';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import { Storagelocation } from '../solidity-decoder/decodeInfo';
 import { TraceManager } from '../trace/traceManager';
 import { decodeMappingsKeys } from './mappingPreimages';

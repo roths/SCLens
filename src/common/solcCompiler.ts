@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as https from 'https';
-import * as solc from 'solc';
+const solc = require('solc');
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CompilationResult, Source, CompilationError } from './type';
@@ -247,9 +247,17 @@ export class SolcCompiler {
                 return false;
             }
         }
+        // waiting for downloading
+        if (solcHttpClient.getDownloadTask(selectedVersionFile) !== null) {
+            const isSuccess = await solcHttpClient.getDownloadTask(selectedVersionFile);
+            if (!isSuccess) {
+                return false;
+            }
+        }
         // reload instance
         if (this.compiler === undefined || selectedVersion !== this.usedCompilerVersion) {
             this.compiler = solc.setupMethods(require(destFile));
+            console.log('setup compiler ', this.compiler);
             this.usedCompilerVersion = selectedVersion;
         }
         return true;
@@ -261,20 +269,32 @@ class Downloader {
     static fromHttp(url: string, destFile: string): Promise<boolean> {
         const file = fs.createWriteStream(destFile);
         return new Promise((resolve, reject) => {
-            https.get(url, (response) => {
+            const request = https.get(url, (response) => {
                 if (response.statusCode !== 200) {
-                    reject(`Error retrieving ${url}: ${response.statusMessage}`);
-                } else {
-                    file.on('finish', function () {
-                        file.close();
-                        resolve(true);
+                    fs.unlink(destFile, () => {
+                        console.log(`Error retrieving ${url}: ${response.statusMessage}`);
+                        resolve(false);
                     });
+                } else {
                     response.pipe(file);
                 }
-            }).on('error', function (error) {
-                console.log(error);
-                reject(false);
             });
+            file.on('finish', () => {
+                resolve(true);
+            });
+            file.on('error', err => {
+                console.log(err);
+                fs.unlink(destFile, () => {
+                    resolve(false);
+                });
+            });
+            request.on('error', function (error) {
+                console.log(error);
+                fs.unlink(destFile, () => {
+                    resolve(false);
+                });
+            });
+            request.end();
         });
     }
 
@@ -386,10 +406,26 @@ class SolcHttpClient {
     };
 
     private versionRequest: Promise<SolcVersionMap> | null = null;
+    private solcBinTaskMap: Map<string, Promise<boolean> | null> = new Map();
+
+    public getDownloadTask(version: string): Promise<boolean> | null {
+        return this.solcBinTaskMap.get(version) ?? null;
+    }
 
     async downloadCompiler(version: string, destFile: string) {
-        const url = 'https://binaries.soliditylang.org/bin/' + version;
-        return Downloader.fromHttp(url, destFile);
+        if (!this.solcBinTaskMap.get(version)) {
+            const url = 'https://binaries.soliditylang.org/bin/' + version;
+            this.solcBinTaskMap.set(version, new Promise((resolve, reject) => {
+                Downloader.fromHttp(url, destFile).then((result) => {
+                    this.solcBinTaskMap.set(version, null);
+                    resolve(result);
+                }).catch((err) => {
+                    this.solcBinTaskMap.set(version, null);
+                    reject(err);
+                });
+            }));
+        }
+        return this.solcBinTaskMap.get(version);
     }
 
     async fetchVersions(): Promise<SolcVersionMap> {

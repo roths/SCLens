@@ -1,7 +1,6 @@
 'use strict';
-import { helpers } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import { StructLog } from '../../common/type';
-const { ui } = helpers;
 
 // vmTraceIndex has to point to a CALL, CODECALL, ...
 export function resolveCalledAddress(vmTraceIndex: number, trace: StructLog[]) {
@@ -10,7 +9,7 @@ export function resolveCalledAddress(vmTraceIndex: number, trace: StructLog[]) {
     return contractCreationToken(vmTraceIndex);
   } else if (isCallInstruction(step)) {
     const stack = step.stack; // callcode, delegatecall, ...
-    return ui.normalizeHexAddress(stack[stack.length - 2]);
+    return util.normalizeHexAddress(stack[stack.length - 2]);
   }
   return null;
 }
@@ -20,7 +19,7 @@ export function isCallInstruction(traceLog: StructLog) {
 }
 
 export function isNewContextStorageInstruction(traceLog: StructLog) {
-  return ['CREATE' , 'CALL' , 'CREATE2'].includes(traceLog.op);
+  return ['CREATE', 'CALL', 'CREATE2'].includes(traceLog.op);
 }
 
 export function isCreateInstruction(traceLog: StructLog) {

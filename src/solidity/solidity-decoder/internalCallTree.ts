@@ -1,6 +1,5 @@
 'use strict';
-import { AstWalker } from '@remix-project/remix-astwalker';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../common/utils';
 import { TraceManager } from '../trace/traceManager';
 import { AstNode, CompilationResult, StructLog, VariableDeclarationAstNode, YulBlockAstNode, YulVariableDeclarationAstNode } from '../../common/type';
 // import { SourceLocationTracker } from '../source/sourceLocationTracker'
@@ -13,6 +12,7 @@ import { CodeManager, SourceLocation } from '../code/codeManager';
 import { GeneratedSource } from '../../common/type';
 import { StatesDefinitions } from './astHelper';
 import { AbiItem } from 'web3-utils';
+import { AstWalker } from '../../common/astWalker';
 
 /**
  * Tree representing internal jump into function.
@@ -134,7 +134,10 @@ export class InternalCallTree {
     if (!scopes.length) {
       return null;
     }
-    const scopeStart = util.findLowerBoundValue(vmtraceIndex, scopes);
+    const scopeStart = util.findLowerBoundValue(vmtraceIndex, scopes.map(Number));
+    if (scopeStart === null) {
+      return '';
+    }
     return this.scopeStarts[scopeStart];
   }
 
@@ -196,7 +199,7 @@ export class InternalCallTree {
   private async buildTree(vmTraceIndex: number, scopeId: string, isExternalCall: boolean, isCreation: boolean): Promise<any> {
     let subScope = 1;
     this.scopeStarts[vmTraceIndex] = scopeId;
-    this.scopes[scopeId] = { firstStep: vmTraceIndex, locals: {}, isCreation , lastStep: vmTraceIndex};
+    this.scopes[scopeId] = { firstStep: vmTraceIndex, locals: {}, isCreation, lastStep: vmTraceIndex };
 
     function callDepthChange(tree: InternalCallTree, step: number) {
       if (step + 1 < tree.traceManager.getLength()) {

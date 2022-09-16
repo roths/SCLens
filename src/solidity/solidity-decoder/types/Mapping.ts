@@ -75,7 +75,7 @@ function getMappingLocation(key: string, position: string) {
   return mappingStorageLocationinBn;
 }
 
-function concatTypedArrays(a, b) { // a, b TypedArray of same type
+function concatTypedArrays(a: any, b: any) { // a, b TypedArray of same type
   const c = new (a.constructor)(a.length + b.length);
   c.set(a, 0);
   c.set(b, a.length);

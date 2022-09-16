@@ -1,6 +1,6 @@
 'use strict';
 import { add, toBN, extractHexValue } from './util';
-import { util } from '@remix-project/remix-lib';
+import { util } from '../../../common/utils';
 import { BN } from 'ethereumjs-util';
 import { RefType } from './RefType';
 import { SolidityType, Storagelocation } from '../decodeInfo';
@@ -29,13 +29,13 @@ export class ArrayType extends RefType {
     this.arraySize = arraySize;
   }
 
-  async decodeFromStorage(location: Storagelocation, storageViewer: StorageViewer): any {
+  async decodeFromStorage(location: Storagelocation, storageViewer: StorageViewer): Promise<any> {
     const ret = [];
     let size = null;
     let slotValue;
     try {
       slotValue = await extractHexValue(location, storageViewer, this.storageBytes);
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
       return {
         error: '<decoding failed - ' + e.message + '>',

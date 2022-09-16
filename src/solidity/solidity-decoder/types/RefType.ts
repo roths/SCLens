@@ -1,7 +1,6 @@
 'use strict';
 import { BN } from 'ethereumjs-util';
 import { ethers } from 'ethers';
-import { CompiledContract } from '../../../common/type';
 import { StorageViewer } from '../../storage/storageViewer';
 import { SolidityType } from '../decodeInfo';
 import { toBN } from './util';

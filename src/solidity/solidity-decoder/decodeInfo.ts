@@ -56,7 +56,7 @@ function uint(type: string) {
   * @param {String} type - type given by the AST (e.g int256, int32)
   * @return {Object} returns decoded info about the current type: { storageBytes, typeName}
   */
-function int(type: s) {
+function int(type: string) {
   type = type === 'int' ? 'int256' : type;
   const storageBytes = parseInt(type.replace('int', '')) / 8;
   return new IntType(storageBytes);
