@@ -1,5 +1,6 @@
 # SCLens README
 SCLens is vscode extension to help more people interested in web3 create their first smart contract faster and easier.
+this project will be open source in soon.
 ## Features
 
 1. compile contract
@@ -12,11 +13,13 @@ SCLens is vscode extension to help more people interested in web3 create their f
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+you tell me...
+email: 357664853@qq.com
+github: https://github.com/roths
 
 ## Release Notes
 
-### 0.0.1-beta
+### 0.0.1
 
 Initial release of ...
 
