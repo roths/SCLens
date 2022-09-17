@@ -4,15 +4,15 @@
 
 import { EventEmitter } from 'events';
 import { TextDecoder, TextEncoder } from 'util';
-import { SolcCompiler } from '../../common/solcCompiler';
+import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
 import * as vscode from 'vscode';
-import { CompilationResult } from '../../common/type';
+import { CompilationResult } from '../../solidity/type';
 import Web3 from 'web3';
 import { TraceManager } from '../../solidity/trace/traceManager';
 import { CodeManager, SourceLocation } from '../../solidity/code/codeManager';
 import { userContext } from '../../common/userContext';
 import { multiStepInput } from '../ui/invokeFuncStepView';
-import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from '../../solidity/solidity-decoder';
+import { InternalCallTree, localDecoder, SolidityProxy, stateDecoder } from '../../solidity/decoder';
 import { util } from '../../common/utils';
 import { Decorator } from '../ui/highlightUtil';
 import { StorageViewer } from '../../solidity/storage/storageViewer';

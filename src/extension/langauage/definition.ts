@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { SolcCompiler } from '../../common/solcCompiler';
+import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
 import { userContext } from '../../common/userContext';
-import { AstNode, AstNodeType, CompilationResult, UserDefinedTypeNameAstNode, VariableDeclarationAstNode } from '../../common/type';
-import { AstWalker } from '../../common/astWalker';
+import { AstNode, AstNodeType, CompilationResult, UserDefinedTypeNameAstNode, VariableDeclarationAstNode } from '../../solidity/type';
+import { AstWalker } from '../../solidity/compiler/astWalker';
 
 class SolidityDefinitionProvider implements vscode.DefinitionProvider {
 

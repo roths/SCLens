@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { SolcCompiler } from '../../common/solcCompiler';
-import { CompilationError, Source } from '../../common/type';
+import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
+import { CompilationError, Source } from '../../solidity/type';
 import { userContext } from '../../common/userContext';
 import { getText } from '../../common/utils/file';
 

@@ -1,6 +1,6 @@
 'use strict';
 import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util';
-import { VariableDeclarationAstNode } from './common/type';
+import { VariableDeclarationAstNode } from './solidity/type';
 import { StorageViewer } from './solidity/storage/storageViewer';
 
 export function decodeIntFromHex(value: any, byteLength: number, signed: boolean) {

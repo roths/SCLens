@@ -3,7 +3,7 @@ import { util } from '../../common/utils';
 import { isContractCreation } from '../trace/traceHelper';
 import { extractStateVariables } from './stateDecoder';
 import { ContractDefinitions, extractContractDefinitions, extractStatesDefinitions, StatesDefinitions } from './astHelper';
-import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract, GeneratedSource } from '../../common/type';
+import { CompilationResult, ComplitionSources, CompiledContractObj, CompiledContract, GeneratedSource } from '../type';
 import { TypesOffsets } from './decodeInfo';
 import { TraceManager } from '../trace/traceManager';
 import { CodeManager, SourceLocation } from '../code/codeManager';

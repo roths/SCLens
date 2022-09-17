@@ -1,7 +1,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { solcHttpClient } from '../../common/solcCompiler';
+import { solcHttpClient } from '../../solidity/compiler/solcCompiler';
 import { userContext } from '../../common/userContext';
 
 export class SettingsTreeViewProvider implements vscode.TreeDataProvider<SettingsItem> {

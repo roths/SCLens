@@ -1,6 +1,6 @@
 'use strict';
-import { AstWalker } from '../../common/astWalker';
-import { ComplitionSources, AstNode } from '../../common/type';
+import { AstWalker } from '../compiler/astWalker';
+import { ComplitionSources, AstNode } from '../type';
 
 export interface ContractDefinitions {
   contractsById: { [key: string]: AstNode; },

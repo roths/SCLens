@@ -1,6 +1,6 @@
 'use strict';
 import { util } from '../../common/utils';
-import { StructLog } from '../../common/type';
+import { StructLog } from '../type';
 
 // vmTraceIndex has to point to a CALL, CODECALL, ...
 export function resolveCalledAddress(vmTraceIndex: number, trace: StructLog[]) {

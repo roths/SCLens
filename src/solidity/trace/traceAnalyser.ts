@@ -2,7 +2,7 @@
 import { Transaction } from 'web3-core';
 import { TraceCache } from './traceCache';
 import * as traceHelper from './traceHelper';
-import { StructLog } from '../../common/type';
+import { StructLog } from '../type';
 
 interface TraceContext {
   storageContext: string[],

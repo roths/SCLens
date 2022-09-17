@@ -1,6 +1,6 @@
 'use strict';
 import { util } from '../../common/utils';
-import { StructLog } from '../../common/type';
+import { StructLog } from '../type';
 
 export interface Call {
   op: string,

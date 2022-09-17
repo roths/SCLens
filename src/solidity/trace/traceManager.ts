@@ -4,7 +4,7 @@ import { TraceAnalyser } from './traceAnalyser';
 import { Call, TraceCache } from './traceCache';
 import * as traceHelper from './traceHelper';
 import { Transaction } from 'web3-eth';
-import { StructLog, TraceTransaction, TraceTransactionOptions } from '../../common/type';
+import { StructLog, TraceTransaction, TraceTransactionOptions } from '../type';
 import Web3 from 'web3';
 
 export class TraceManager {

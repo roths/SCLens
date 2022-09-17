@@ -1,5 +1,5 @@
 import Web3 from "web3";
-import { CompiledContract } from "./type";
+import { CompiledContract } from "../solidity/type";
 import { userContext } from "./userContext";
 import { AbiItem } from 'web3-utils';
 

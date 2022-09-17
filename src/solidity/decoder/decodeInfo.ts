@@ -14,7 +14,7 @@ import { Mapping as MappingType } from './types/Mapping';
 import { FunctionType } from './types/FunctionType';
 import { extractLocation, removeLocation } from './types/util';
 import { StatesDefinitions } from './astHelper';
-import { EnumDefinitionAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../../common/type';
+import { EnumDefinitionAstNode, StructDefinitionAstNode, VariableDeclarationAstNode } from '../type';
 import { type } from 'os';
 
 /**

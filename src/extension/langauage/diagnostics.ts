@@ -1,4 +1,4 @@
-import { SolcCompiler } from "../../common/solcCompiler";
+import { SolcCompiler } from "../../solidity/compiler/solcCompiler";
 import * as vscode from 'vscode';
 import { getLineOffset, getSourceRange, getText } from "../../common/utils/file";
 import { userContext } from "../../common/userContext";

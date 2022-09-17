@@ -1,4 +1,4 @@
-import { AstNode } from './type';
+import { AstNode } from '../type';
 
 function isObject(obj: any): boolean {
   return obj !== null && obj.constructor.name === 'Object';

@@ -1,5 +1,5 @@
 'use strict';
-import { EnumDefinitionAstNode } from '../../../common/type';
+import { EnumDefinitionAstNode } from '../../type';
 import { ValueType } from './ValueType';
 
 export class Enum extends ValueType {

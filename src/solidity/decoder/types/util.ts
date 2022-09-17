@@ -1,6 +1,6 @@
 'use strict';
 import { BN, bufferToHex, unpadHexString } from 'ethereumjs-util';
-import { VariableDeclarationAstNode } from '../../../common/type';
+import { VariableDeclarationAstNode } from '../../type';
 import { StorageViewer } from '../../storage/storageViewer';
 import { Storagelocation } from '../decodeInfo';
 

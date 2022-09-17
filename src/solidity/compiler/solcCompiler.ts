@@ -3,10 +3,10 @@ import * as https from 'https';
 const solc = require('solc');
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CompilationResult, Source, CompilationError } from './type';
+import { CompilationResult, Source, CompilationError } from '../type';
 import { ImportResolver } from './importResolver';
 import * as semver from 'semver';
-import { getText } from './utils/file';
+import { getText } from '../../common/utils/file';
 
 interface SolcVersionMap {
     // 0.8.15: "soljson-v0.8.15+commit.e14f2714.js"

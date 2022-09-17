@@ -1,4 +1,4 @@
-import { ComplitionSources, VariableDeclarationAstNode } from '../../common/type';
+import { ComplitionSources, VariableDeclarationAstNode } from '../type';
 import { StorageViewer } from '../storage/storageViewer';
 import { extractStatesDefinitions } from './astHelper';
 import { computeOffsets, TypesOffsets } from './decodeInfo';

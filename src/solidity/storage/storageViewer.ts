@@ -1,6 +1,6 @@
 'use strict';
 import { util } from '../../common/utils';
-import { Storagelocation } from '../solidity-decoder/decodeInfo';
+import { Storagelocation } from '../decoder/decodeInfo';
 import { TraceManager } from '../trace/traceManager';
 import { decodeMappingsKeys } from './mappingPreimages';
 import { StorageResolver } from './storageResolver';

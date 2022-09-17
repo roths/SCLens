@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { AstWalker } from '../../common/astWalker';
-import { SolcCompiler } from '../../common/solcCompiler';
-import { instanceField, definitionField, AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode, AstNode } from '../../common/type';
+import { AstWalker } from '../../solidity/compiler/astWalker';
+import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
+import { instanceField, definitionField, AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode, AstNode } from '../../solidity/type';
 import { userContext } from '../../common/userContext';
 
 class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {

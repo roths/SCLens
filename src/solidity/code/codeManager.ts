@@ -1,7 +1,7 @@
 
 import { util } from '../../common/utils';
 import Web3 from 'web3';
-import { CompiledContractObj, GeneratedSource } from '../../common/type';
+import { CompiledContractObj, GeneratedSource } from '../type';
 import { isContractCreation } from '../trace/traceHelper';
 import { TraceManager } from '../trace/traceManager';
 import { nameOpCodes } from './codeUtils';
