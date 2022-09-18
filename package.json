@@ -4,7 +4,7 @@
   "displayName": "SCLens",
   "publisher": "luoqiaoyou",
   "description": "SCLens is vscode extension to help more people interested in web3 create their first smart contract faster and easier.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.68.0"
   },
