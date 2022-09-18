@@ -338,6 +338,7 @@
     "ethereumjs-util": "^7.1.5",
     "ethers": "^5.7.0",
     "lru-cache": "^7.14.0",
+    "path-browserify": "^1.0.1",
     "semver": "^7.3.7",
     "solc": "^0.8.15",
     "string-similarity": "^4.0.4",

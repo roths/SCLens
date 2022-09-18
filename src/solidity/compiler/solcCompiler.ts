@@ -4,7 +4,7 @@ const solc = require('solc');
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CompilationResult, Source, CompilationError } from '../type';
-import { ImportResolver } from './importResolver';
+import { Imported, ImportResolver } from './importResolver';
 import * as semver from 'semver';
 import { getText } from '../../common/utils/file';
 
@@ -12,6 +12,8 @@ interface SolcVersionMap {
     // 0.8.15: "soljson-v0.8.15+commit.e14f2714.js"
     [version: string]: string;
 }
+
+
 export class SolcCompiler {
 
     private cachePath: string;
@@ -108,15 +110,25 @@ export class SolcCompiler {
         return false;
     }
 
-    public getFatal(errors?: CompilationError[]) {
+    public getFatals(errors?: CompilationError[]) {
+        const fatals: CompilationError[] = [];
         if (errors) {
             for (const error of errors) {
                 if (error.severity === 'error') {
-                    return error;
+                    fatals.push(error);
                 }
             }
         }
-        return undefined;
+        return fatals;
+    }
+
+    private importInterceptorSet: Set<(file: string) => Imported | undefined | null> = new Set();
+
+    public addImportInterceptor(interceptor: (file: string) => Imported | undefined | null) {
+        this.importInterceptorSet.add(interceptor);
+    }
+    public removeImportInterceptor(interceptor: (file: string) => Imported | undefined | null) {
+        this.importInterceptorSet.delete(interceptor);
     }
 
     private async execSolc(sources: Source, settings: any): Promise<CompilationResult> {
@@ -218,8 +230,19 @@ export class SolcCompiler {
     private async resolveImport(sources: Source, missingImports: string[]) {
         const failureImport: string[] = [];
         for (const importPath of missingImports) {
-            const imported = await this.resolver.resolve(importPath);
-            if (imported !== undefined) {
+            // interceptor
+            let imported: Imported | undefined | null = undefined;
+            for (const interceptor of this.importInterceptorSet) {
+                imported = interceptor(importPath);
+                if (imported !== undefined) {
+                    break;
+                }
+            }
+            // normal import
+            if (imported === undefined) {
+                imported = await this.resolver.resolve(importPath);
+            }
+            if (imported !== undefined && imported !== null) {
                 sources[importPath] = imported;
             } else {
                 failureImport.push(importPath);
@@ -257,7 +280,6 @@ export class SolcCompiler {
         // reload instance
         if (this.compiler === undefined || selectedVersion !== this.usedCompilerVersion) {
             this.compiler = solc.setupMethods(require(destFile));
-            console.log('setup compiler ', this.compiler);
             this.usedCompilerVersion = selectedVersion;
         }
         return true;

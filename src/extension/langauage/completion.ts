@@ -1,20 +1,17 @@
 import * as vscode from 'vscode';
 import { AstWalker } from '../../solidity/compiler/astWalker';
-import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
 import { instanceField, definitionField, AstNodeType, CompilationResult, ContractDefinitionAstNode, EnumDefinitionAstNode, UserDefinedTypeNameAstNode, EnumValueAstNode, FunctionDefinitionAstNode, IdentifierAstNode, StructDefinitionAstNode, VariableDeclarationAstNode, AstNode } from '../../solidity/type';
-import { userContext } from '../../common/userContext';
+import { eventCenter, getCurActiveDoc, LanguageEvent } from './common';
 
 class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
     private astNodeMap = new Map<number, AstNode>();
     private scopeNodeMap = new Map<number, AstNode[]>();
-    private globalNodeIds = new Set<number>();
-    private solc: SolcCompiler;
     private lastCompilationResult?: CompilationResult;
     private fileMap = new Map<number, string>();
 
-    constructor(context: vscode.ExtensionContext) {
-        this.solc = new SolcCompiler(context.extensionPath);
+    constructor() {
+        eventCenter.on(LanguageEvent.ast, this.onAstChange.bind(this));
     }
 
     /**
@@ -29,12 +26,15 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         position: vscode.Position,
         token: vscode.CancellationToken,
         context: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionList<vscode.CompletionItem> | vscode.CompletionItem[]> {
-        if (!this.lastCompilationResult) {
+        if (!this.lastCompilationResult
+            || !this.lastCompilationResult.sources
+            || !this.lastCompilationResult.sources[document.fileName]) {
             return [];
         }
 
+        const curFileAst = this.lastCompilationResult.sources[document.fileName].ast;
         const cursorOffset = document.offsetAt(position);
-        const scopeChain = getScopeChain(cursorOffset, this.lastCompilationResult.sources![document.fileName].ast, this.fileMap);
+        const scopeChain = getScopeChain(cursorOffset, curFileAst, this.fileMap);
 
         const completions: vscode.CompletionItem[] = [];
 
@@ -54,7 +54,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
             // remove last one
             const callChain = wordStr.split('.').slice(0, -1);
             // find scope symbol
-            let [targetAstNode, isInstance] = this.findAstNodeFromScope(callChain[0], scopeChain);
+            let [targetAstNode, isInstance] = this.findAstNodeFromScope(callChain[0], scopeChain, curFileAst);
             if (targetAstNode) {
                 // find field symbol
                 for (const fieldName of callChain.slice(1)) {
@@ -97,7 +97,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
                 }
             }
             // return global symbol completion
-            for (const astNodeId of this.globalNodeIds) {
+            for (const astNodeId of getExportedSymbolIds(curFileAst)) {
                 if (completionNodeIdSet.has(astNodeId)) {
                     continue;
                 }
@@ -109,54 +109,50 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         return completions;
     }
 
-    public async onEditorChange(document: vscode.TextDocument | undefined) {
-        if (!document) {
+    public async onAstChange(result: CompilationResult) {
+        const hasSource = result.sources && Object.keys(result.sources).length > 0;
+        if (!hasSource) {
             return;
         }
-
-        this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
-        const result = await this.solc.analyseAst(document.fileName);
-        const hasSource = result.sources && Object.keys(result.sources).length > 0;
-        const hasFatal = this.solc.hasFatal(result.errors);
-        if (!hasFatal && hasSource) {
-            const tmpFileMap = new Map<number, string>();
-            for (const filePath in result.sources) {
-                tmpFileMap.set(result.sources[filePath].id, filePath);
+        const curActiveDoc = getCurActiveDoc();
+        if (curActiveDoc) {
+            const hasSourceInLastResult = this.lastCompilationResult && this.lastCompilationResult.sources && this.lastCompilationResult.sources[curActiveDoc];
+            const hasSourceInNewResult = result.sources && result.sources[curActiveDoc];
+            if (hasSourceInLastResult && !hasSourceInNewResult) {
+                // maybe editing content
+                return;
             }
-
-            const tmpScopeNodeMap = new Map<number, AstNode[]>();
-            const tmpAstNodeMap = new Map<number, AstNode>();
-            const tmpGlobalNodeIds = new Set<number>();
-            for (const filePath in result.sources) {
-                new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
-                    const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
-                    if (!tmpFileMap.has(fileId)) {
-                        return;
-                    }
-                    // find all scope
-                    if (node.scope) {
-                        if (!tmpScopeNodeMap.has(node.scope)) {
-                            tmpScopeNodeMap.set(node.scope, []);
-                        }
-                        tmpScopeNodeMap.get(node.scope)!.push(node);
-                    }
-                    // save all ast node
-                    tmpAstNodeMap.set(node.id, node);
-                    // find global symbol
-                    if (node.exportedSymbols) {
-                        for (const symbolName of Object.keys(node.exportedSymbols)) {
-                            tmpGlobalNodeIds.add((node.exportedSymbols[symbolName] as any)[0]);
-                        }
-                    }
-                });
-            }
-            // save context
-            this.globalNodeIds = tmpGlobalNodeIds;
-            this.scopeNodeMap = tmpScopeNodeMap;
-            this.astNodeMap = tmpAstNodeMap;
-            this.lastCompilationResult = result;
-            this.fileMap = tmpFileMap;
         }
+
+        const tmpFileMap = new Map<number, string>();
+        for (const filePath in result.sources) {
+            tmpFileMap.set(result.sources[filePath].id, filePath);
+        }
+
+        const tmpScopeNodeMap = new Map<number, AstNode[]>();
+        const tmpAstNodeMap = new Map<number, AstNode>();
+        for (const filePath in result.sources) {
+            new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
+                const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
+                if (!tmpFileMap.has(fileId)) {
+                    return;
+                }
+                // find all scope
+                if (node.scope) {
+                    if (!tmpScopeNodeMap.has(node.scope)) {
+                        tmpScopeNodeMap.set(node.scope, []);
+                    }
+                    tmpScopeNodeMap.get(node.scope)!.push(node);
+                }
+                // save all ast node
+                tmpAstNodeMap.set(node.id, node);
+            });
+        }
+        // save context
+        this.scopeNodeMap = tmpScopeNodeMap;
+        this.astNodeMap = tmpAstNodeMap;
+        this.lastCompilationResult = result;
+        this.fileMap = tmpFileMap;
     }
 
     private filterByInstance(isInstance: boolean, childNode: AstNode): boolean {
@@ -202,7 +198,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         return [result, isInstance];
     }
 
-    private findAstNodeFromScope(invoker: string, scopeChain: number[]): [AstNode | undefined, boolean] {
+    private findAstNodeFromScope(invoker: string, scopeChain: number[], curFileAst: AstNode): [AstNode | undefined, boolean] {
         let result: AstNode | undefined;
         let isInstance = false;
         for (const scopeId of scopeChain.reverse()) {
@@ -237,7 +233,7 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
         }
 
         // find the first astNode name match with word in global scope
-        for (const astNodeId of this.globalNodeIds) {
+        for (const astNodeId of getExportedSymbolIds(curFileAst)) {
             const astNode = this.astNodeMap.get(astNodeId);
             if (!astNode) {
                 continue;
@@ -253,6 +249,15 @@ class SolidityCompletionItemProvider implements vscode.CompletionItemProvider {
 
 }
 
+function getExportedSymbolIds(node: AstNode) {
+    const exportIds = new Set<number>();
+    if (node.exportedSymbols) {
+        for (const symbolName of Object.keys(node.exportedSymbols)) {
+            exportIds.add((node.exportedSymbols[symbolName] as any)[0]);
+        }
+    }
+    return exportIds;
+}
 
 function getScopeChain(cursorOffset: number, astTree: AstNode, validFileMap: Map<number, string>) {
     const scopeChain: number[] = [];
@@ -316,15 +321,8 @@ function parseAstToCompletionItem(node: AstNode) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    const compilation = new SolidityCompletionItemProvider(context);
-
-    if (vscode.window.activeTextEditor) {
-        compilation.onEditorChange(vscode.window.activeTextEditor.document);
-    }
-
+    const compilation = new SolidityCompletionItemProvider();
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('solidity', compilation, '.'));
-    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => compilation.onEditorChange(editor?.document)));
-    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => compilation.onEditorChange(event.document)));
 }
 
 export function deactivate() {

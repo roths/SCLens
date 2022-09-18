@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import { SolcCompiler } from '../../solidity/compiler/solcCompiler';
-import { userContext } from '../../common/userContext';
 import { AstNode, AstNodeType, CompilationResult, UserDefinedTypeNameAstNode, VariableDeclarationAstNode } from '../../solidity/type';
 import { AstWalker } from '../../solidity/compiler/astWalker';
+import { eventCenter, getCurActiveDoc, LanguageEvent } from './common';
 
 class SolidityDefinitionProvider implements vscode.DefinitionProvider {
 
@@ -10,22 +9,24 @@ class SolidityDefinitionProvider implements vscode.DefinitionProvider {
     private refNodeMap = new Map<number, AstNode[]>();
     private scopeNodeMap = new Map<number, AstNode[]>();
     private globalNodeIds = new Set<number>();
-    private solc: SolcCompiler;
     private lastCompilationResult?: CompilationResult;
     private fileMap = new Map<number, string>();
 
-    constructor(context: vscode.ExtensionContext) {
-        this.solc = new SolcCompiler(context.extensionPath);
+    constructor() {
+        eventCenter.on(LanguageEvent.ast, this.onAstChange.bind(this));
     }
 
     public async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
-        if (!this.lastCompilationResult) {
+        if (!this.lastCompilationResult
+            || !this.lastCompilationResult.sources
+            || !this.lastCompilationResult.sources[document.fileName]) {
             return [];
         }
 
+        const curFileAst = this.lastCompilationResult.sources[document.fileName].ast;
         const cursorOffset = document.offsetAt(position);
         const links: vscode.Location[] = [];
-        const [cursorAstNode, scopeChain] = getCursorAstNodeAndScopeChain(cursorOffset, this.lastCompilationResult.sources![document.fileName].ast, this.fileMap);
+        const [cursorAstNode, scopeChain] = getCursorAstNodeAndScopeChain(cursorOffset, curFileAst, this.fileMap);
         if (!cursorAstNode) {
             return links;
         }
@@ -90,75 +91,79 @@ class SolidityDefinitionProvider implements vscode.DefinitionProvider {
         return links;
     }
 
-    public async onEditorChange(document: vscode.TextDocument | undefined) {
-        if (!document) {
+    public async onAstChange(result: CompilationResult) {
+        const hasSource = result.sources && Object.keys(result.sources).length > 0;
+        if (!hasSource) {
             return;
         }
-
-        this.solc.selectedCompilerVersion = userContext.selectedCompilerVersion;
-        const result = await this.solc.analyseAst(document.fileName);
-        const hasSource = result.sources && Object.keys(result.sources).length > 0;
-        const hasFatal = this.solc.hasFatal(result.errors);
-        if (!hasFatal && hasSource) {
-            const tmpFileMap = new Map<number, string>();
-            for (const filePath in result.sources) {
-                tmpFileMap.set(result.sources[filePath].id, filePath);
+        const curActiveDoc = getCurActiveDoc();
+        if (curActiveDoc) {
+            const hasSourceInLastResult = this.lastCompilationResult && this.lastCompilationResult.sources && this.lastCompilationResult.sources[curActiveDoc];
+            const hasSourceInNewResult = result.sources && result.sources[curActiveDoc];
+            if (hasSourceInLastResult && !hasSourceInNewResult) {
+                // maybe editing content
+                return;
             }
-
-            const tmpScopeNodeMap = new Map<number, AstNode[]>();
-            const tmpAstNodeMap = new Map<number, AstNode>();
-            const tmpGlobalNodeIds = new Set<number>();
-            const tmpRefNodeMap = new Map<number, AstNode[]>();
-            for (const filePath in result.sources) {
-                new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
-                    const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
-                    if (!tmpFileMap.has(fileId)) {
-                        return;
-                    }
-                    // find all scope
-                    if (node.scope) {
-                        if (!tmpScopeNodeMap.has(node.scope)) {
-                            tmpScopeNodeMap.set(node.scope, []);
-                        }
-                        tmpScopeNodeMap.get(node.scope)!.push(node);
-                    }
-                    // save all ast node
-                    tmpAstNodeMap.set(node.id, node);
-                    // find global symbol
-                    if (node.exportedSymbols) {
-                        for (const symbolName of Object.keys(node.exportedSymbols)) {
-                            tmpGlobalNodeIds.add((node.exportedSymbols[symbolName] as any)[0]);
-                        }
-                    }
-                    // save referenced ast node
-                    if (node.referencedDeclaration || node.nodeType === AstNodeType.VariableDeclaration) {
-                        let refId = -1;
-                        if (node.referencedDeclaration) {
-                            refId = node.referencedDeclaration;
-                        }
-                        if (node.nodeType === AstNodeType.VariableDeclaration) {
-                            const varAstNode = node as VariableDeclarationAstNode;
-                            if (varAstNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
-                                refId = varAstNode.typeName.referencedDeclaration;
-                            }
-                        }
-                        if (refId !== -1) {
-                            if (!tmpRefNodeMap.has(refId)) {
-                                tmpRefNodeMap.set(refId, []);
-                            }
-                            tmpRefNodeMap.get(refId)!.push(node);
-                        }
-                    }
-                });
-            }
-            // save context
-            this.globalNodeIds = tmpGlobalNodeIds;
-            this.scopeNodeMap = tmpScopeNodeMap;
-            this.astNodeMap = tmpAstNodeMap;
-            this.refNodeMap = tmpRefNodeMap;
-            this.lastCompilationResult = result;
-            this.fileMap = tmpFileMap;
         }
+
+        const tmpFileMap = new Map<number, string>();
+        for (const filePath in result.sources) {
+            tmpFileMap.set(result.sources[filePath].id, filePath);
+        }
+
+        const tmpScopeNodeMap = new Map<number, AstNode[]>();
+        const tmpAstNodeMap = new Map<number, AstNode>();
+        const tmpGlobalNodeIds = new Set<number>();
+        const tmpRefNodeMap = new Map<number, AstNode[]>();
+        for (const filePath in result.sources) {
+            new AstWalker().walkFull(result.sources[filePath].ast, (node: AstNode) => {
+                const [offset, len, fileId] = node.src.split(':').map(value => parseInt(value));
+                if (!tmpFileMap.has(fileId)) {
+                    return;
+                }
+                // find all scope
+                if (node.scope) {
+                    if (!tmpScopeNodeMap.has(node.scope)) {
+                        tmpScopeNodeMap.set(node.scope, []);
+                    }
+                    tmpScopeNodeMap.get(node.scope)!.push(node);
+                }
+                // save all ast node
+                tmpAstNodeMap.set(node.id, node);
+                // find global symbol
+                if (node.exportedSymbols) {
+                    for (const symbolName of Object.keys(node.exportedSymbols)) {
+                        tmpGlobalNodeIds.add((node.exportedSymbols[symbolName] as any)[0]);
+                    }
+                }
+                // save referenced ast node
+                if (node.referencedDeclaration || node.nodeType === AstNodeType.VariableDeclaration) {
+                    let refId = -1;
+                    if (node.referencedDeclaration) {
+                        refId = node.referencedDeclaration;
+                    }
+                    if (node.nodeType === AstNodeType.VariableDeclaration) {
+                        const varAstNode = node as VariableDeclarationAstNode;
+                        if (varAstNode.typeName.nodeType === AstNodeType.UserDefinedTypeName) {
+                            refId = varAstNode.typeName.referencedDeclaration;
+                        }
+                    }
+                    if (refId !== -1) {
+                        if (!tmpRefNodeMap.has(refId)) {
+                            tmpRefNodeMap.set(refId, []);
+                        }
+                        tmpRefNodeMap.get(refId)!.push(node);
+                    }
+                }
+            });
+        }
+        // save context
+        this.globalNodeIds = tmpGlobalNodeIds;
+        this.scopeNodeMap = tmpScopeNodeMap;
+        this.astNodeMap = tmpAstNodeMap;
+        this.refNodeMap = tmpRefNodeMap;
+        this.lastCompilationResult = result;
+        this.fileMap = tmpFileMap;
     }
 
     private findAstNodeFromChild(parent: AstNode, fieldName: string): [AstNode | undefined, boolean] {
@@ -274,15 +279,8 @@ function getCursorAstNodeAndScopeChain(cursorOffset: number, astTree: AstNode, v
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    const definition = new SolidityDefinitionProvider(context);
-
-    if (vscode.window.activeTextEditor) {
-        definition.onEditorChange(vscode.window.activeTextEditor.document);
-    }
-
+    const definition = new SolidityDefinitionProvider();
     context.subscriptions.push(vscode.languages.registerDefinitionProvider('solidity', definition));
-    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => definition.onEditorChange(editor?.document)));
-    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => definition.onEditorChange(event.document)));
 }
 
 export function deactivate() {
